@@ -1,0 +1,85 @@
+name: Setup app dependencies
+description: Restore what npm run setup installs (the mdk CLI, the UI deps, the dev stack's workers) from cache by exact key; on a miss, run npm run setup.
+
+inputs:
+  cache-key:
+    description: Exact cache key for the installed dependencies (resolved once in the setup job from the app's install inputs).
+    required: true
+  save:
+    description: Save the cache on a miss. Only the setup job sets this.
+    required: false
+    default: 'false'
+  git-auth:
+    description: Configure git auth on a miss. Set 'false' when the job already configured it.
+    required: false
+    default: 'true'
+  enabled:
+    description: Whether the miningos-read token is enabled (vars.ENABLE_APP_TOKEN set).
+    required: false
+    default: 'false'
+  app-id:
+    description: miningos-read GitHub App id/client-id.
+    required: false
+    default: ''
+  private-key:
+    description: miningos-read GitHub App private key.
+    required: false
+    default: ''
+  node-version:
+    description: Node.js version (e.g. lts/*).
+    required: true
+
+outputs:
+  cache-hit:
+    description: Whether the dependencies were restored from cache
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    # Everything npm run setup writes. The links inside (dev/ and dev/mock-site/
+    # to the app) point at absolute paths under the workspace, the same on
+    # every runner.
+    - name: Restore app dependencies cache
+      id: cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          ui-src/node_modules
+          dev/node_modules
+          dev/mock-site/node_modules
+        key: ${{ inputs.cache-key }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    # The vendor miner workers in dev/package.json install from GitHub.
+    - name: Configure git auth for private dependencies
+      if: ${{ steps.cache.outputs.cache-hit != 'true' && inputs.git-auth == 'true' }}
+      uses: ./.github/actions/setup-git-credentials
+      with:
+        enabled: ${{ inputs.enabled }}
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+
+    - name: Install the app dependencies
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: npm run setup
+
+    # Unlike node-setup-cache this also saves on pull_request: downstream jobs
+    # in the same PR run must hit it. The key changes with every install
+    # input, so concurrent runs rarely race on the same key.
+    - name: Save app dependencies cache
+      if: ${{ inputs.save == 'true' && steps.cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          node_modules
+          ui-src/node_modules
+          dev/node_modules
+          dev/mock-site/node_modules
+        key: ${{ inputs.cache-key }}
