@@ -30,6 +30,7 @@
     "fmt": "ui-src/node_modules/.bin/oxfmt -c .oxfmtrc.json .",
     "fmt:check": "ui-src/node_modules/.bin/oxfmt -c .oxfmtrc.json --check .",
     "test": "npm --prefix ui-src run test",
+    "test:coverage": "npm --prefix ui-src run test:coverage",
     "check": "npm run fmt:check && npm run lint && npm run typecheck && npm run test && npm --prefix ui-src run gen:routes:check && npm run build:ui && npm run validate",
     "gen:routes": "npm --prefix ui-src run gen:routes"
   },
