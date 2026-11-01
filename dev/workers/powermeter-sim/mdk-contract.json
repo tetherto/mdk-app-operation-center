@@ -1,0 +1,48 @@
+{
+  "contractVersion": "1",
+  "metadata": {
+    "provider": "demo",
+    "deviceFamily": "power-meter",
+    "brand": "SIM",
+    "modelsSupported": ["PM-SIM"],
+    "overview": "A simulated three-phase power meter for the Operation Center Lite dev stack: one per container, reporting the same channels as the ABB and SATEC meter workers (active_power in W, voltage in V, current in A). Read-only; it has no commands."
+  },
+  "capabilities": {
+    "telemetry": [
+      {
+        "name": "active_power",
+        "unit": "W",
+        "type": "number",
+        "handler": "src/telemetry/active-power.js",
+        "description": "Total active power through the meter."
+      },
+      {
+        "name": "voltage",
+        "unit": "V",
+        "type": "number",
+        "handler": "src/telemetry/voltage.js",
+        "description": "Line-to-line voltage."
+      },
+      {
+        "name": "current",
+        "unit": "A",
+        "type": "number",
+        "handler": "src/telemetry/current.js",
+        "description": "Line current."
+      },
+      {
+        "name": "snap",
+        "type": "object",
+        "handler": "src/telemetry/snap.js",
+        "description": "Every reading in one call: { active_power, voltage, current }."
+      }
+    ],
+    "commands": [],
+    "health": {
+      "supportedStates": ["OK", "OFFLINE"]
+    },
+    "errors": {
+      "ERR_DEVICE_CALL_FAILED": "The simulator's HTTP API call failed or returned an error."
+    }
+  }
+}

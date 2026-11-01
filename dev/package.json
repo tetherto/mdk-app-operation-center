@@ -1,0 +1,15 @@
+{
+  "name": "op-centre-lite-dev",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The local stack `mdk run --dir dev` boots: the app, the vendor miner workers and a simulated power meter, all on mock devices.",
+  "scripts": {
+    "dev": "mdk run"
+  },
+  "dependencies": {
+    "antminer-mdk-worker": "github:bitmain-official/antminer-mdk-worker#4fd776b4a048a1bc8284ec2eceed82b4631f960c",
+    "op-centre-lite": "file:..",
+    "powermeter-sim": "file:./workers/powermeter-sim",
+    "whatsminer-mdk-worker": "github:whatsminer/whatsminer-mdk-worker#a47fa82020454f9bfa9963ccaaa319b7948e8aa2"
+  }
+}

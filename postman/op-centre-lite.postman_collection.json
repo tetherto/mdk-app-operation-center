@@ -1,0 +1,1033 @@
+{
+  "info": {
+    "_postman_id": "5f24105a-ae95-4199-aa75-067f2b841a39",
+    "name": "Operation Center Lite",
+    "description": "Every route of the Operation Center Lite MDK app, through the Gateway. Set `gatewayUrl`, `username` and `password` in the collection variables, run '0. Sign in / Login' once (it stores the token), then any request. Bodies are typed in ui-src/api/contract.ts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Sign in",
+      "description": "Run first. Every app route needs a Bearer token; this stores it in the collection variable `accessToken` for the other requests.",
+      "item": [
+        {
+          "name": "Login (stores accessToken)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/auth/login",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Signs in at the Gateway with a user from `mdk user add`. The test script saves `accessToken` for every other request.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signed in', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "if (body.refreshToken) pm.collectionVariables.set('refreshToken', body.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Who am I",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/auth/me",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "The signed-in user and roles, as the Gateway sees the token.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/auth/refresh",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Exchanges the refresh token for a new access token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refreshed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json(); if (body.accessToken) pm.collectionVariables.set('accessToken', body.accessToken);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Site reads",
+      "item": [
+        {
+          "name": "Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/config",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "config"]
+            },
+            "description": "Site name and whether commands are on. `commandsEnabled: false` is the hosted demo.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Site summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/site/summary",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "site", "summary"]
+            },
+            "description": "Site-wide miner counts (total, online, error, offline), hashrate in TH/s and power in W.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Containers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/containers",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "containers"]
+            },
+            "description": "Every container with its racks, totals, miner status counts, the shared power mode and percent (null when mixed) and the modes every miner accepts.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Container layout",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/containers/{{containerId}}/layout",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "containers", "{{containerId}}", "layout"]
+            },
+            "description": "The socket grid of one container with the miner in each socket (null for an empty socket). 404 `ERR_CONTAINER_NOT_FOUND` for an unknown id.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Power meters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/power-meters",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "power-meters"]
+            },
+            "description": "Site meter total, the miners' own power, hashrate, and one entry per meter with the miners behind it.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Miners",
+      "item": [
+        {
+          "name": "Miners (page)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/miners?page=1&pageSize=20",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "miners"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "1-based"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20",
+                  "description": "default 20, max 200"
+                }
+              ]
+            },
+            "description": "One page of miners in layout order. `page` is 1-based; `pageSize` defaults to 20, max 200.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Miners in a container",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/miners?containerId={{containerId}}",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "miners"],
+              "query": [
+                {
+                  "key": "containerId",
+                  "value": "{{containerId}}",
+                  "description": "a container id from /api/containers"
+                }
+              ]
+            },
+            "description": "Narrowed to one container.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Miners (search)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/miners?search={{minerId}}",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "miners"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{minerId}}",
+                  "description": "id, serial, IP or position fragment"
+                }
+              ]
+            },
+            "description": "Case-insensitive search over id, serial, IP and position.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Miner logs (download)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/miners/{{minerId}}/logs",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "miners", "{{minerId}}", "logs"]
+            },
+            "description": "Runs the worker's `downloadLogs` and streams the archive as an attachment (`.tgz` on Whatsminer, `.tar` on Antminer). Use Postman's 'Send and Download'. 404 for an unknown miner, 501 `ERR_LOGS_UNSUPPORTED` when the worker has no such command, 502 `ERR_LOGS_FAILED` when it fails. Can take up to 50 s on real hardware.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('attachment', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('content-disposition')).to.include('attachment'); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. History",
+      "item": [
+        {
+          "name": "Hashrate, last 24h at 5m",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/history?metric=hashrate&interval=5m&limit=288",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "history"],
+              "query": [
+                {
+                  "key": "metric",
+                  "value": "hashrate",
+                  "description": "hashrate | power"
+                },
+                {
+                  "key": "interval",
+                  "value": "5m",
+                  "description": "5m | 30m | 3h | 1d"
+                },
+                {
+                  "key": "limit",
+                  "value": "288",
+                  "description": "1..1000 buckets ending now"
+                }
+              ]
+            },
+            "description": "One point per bucket, the average of the samples in it, plus the nominal hashrate of the scope. Buckets with no sample are left out. Intervals: 5m, 30m, 3h, 1d. Without `limit` the last 288 buckets.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Power for one container",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/history?metric=power&interval=30m&limit=48&containerId={{containerId}}",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "history"],
+              "query": [
+                {
+                  "key": "metric",
+                  "value": "power",
+                  "description": ""
+                },
+                {
+                  "key": "interval",
+                  "value": "30m",
+                  "description": ""
+                },
+                {
+                  "key": "limit",
+                  "value": "48",
+                  "description": ""
+                },
+                {
+                  "key": "containerId",
+                  "value": "{{containerId}}",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Narrowed to one container (or `rackId` for one rack).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Custom window (start/end)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/history?metric=hashrate&interval=3h&start={{$timestamp}}000&end={{$timestamp}}000",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "history"],
+              "query": [
+                {
+                  "key": "metric",
+                  "value": "hashrate",
+                  "description": ""
+                },
+                {
+                  "key": "interval",
+                  "value": "3h",
+                  "description": ""
+                },
+                {
+                  "key": "start",
+                  "value": "{{$timestamp}}000",
+                  "description": "ms epoch; replace with a real window"
+                },
+                {
+                  "key": "end",
+                  "value": "{{$timestamp}}000",
+                  "description": "ms epoch"
+                }
+              ]
+            },
+            "description": "Every bucket between `start` and `end` (ms epoch). 400 when only one is given, inverted, or wider than 1000 buckets.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Commands",
+      "description": "Write routes. Sent to each target miner's worker as the signed-in operator. `accepted` is whether the Kernel queued at least one command, `minerCount` how many. A target that matches no miners returns `accepted: false`. 403 `ERR_COMMANDS_DISABLED` when `commandsEnabled` is false.",
+      "item": [
+        {
+          "name": "Power mode for a container",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/commands/power-mode",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "commands", "power-mode"]
+            },
+            "description": "Modes: sleep, low, normal, high. Miners whose worker does not support the mode are skipped. Offline miners are skipped.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"containerId\": \"{{containerId}}\"\n  },\n  \"mode\": \"low\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('accepted', () => pm.expect(pm.response.json().accepted).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Power mode for selected miners",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/commands/power-mode",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "commands", "power-mode"]
+            },
+            "description": "Target by miner ids; unknown ids are ignored.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"minerIds\": [\n      \"{{minerId}}\"\n    ]\n  },\n  \"mode\": \"normal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Power percent for a container",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/commands/power-pct",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "commands", "power-pct"]
+            },
+            "description": "0 to 100. Routed to each worker's own command (setPowerPct on Whatsminer, setHashratePercent on Antminer; the Antminer firmware accepts 50 to 110). The value is remembered per miner and reported as `powerPct` where the worker reports none.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"containerId\": \"{{containerId}}\"\n  },\n  \"pct\": 80\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Power percent for selected miners",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/commands/power-pct",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "commands", "power-pct"]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"minerIds\": [\n      \"{{minerId}}\"\n    ]\n  },\n  \"pct\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Error shapes",
+      "description": "Every error body is `{ statusCode, error, message }` with the `ERR_*` code in `message`.",
+      "item": [
+        {
+          "name": "401 without a token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/config",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "config"]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('401', () => pm.response.to.have.status(401));"]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "404 unknown container",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/containers/nope/layout",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "containers", "nope", "layout"]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 ERR_CONTAINER_NOT_FOUND', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().message).to.eql('ERR_CONTAINER_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "400 half-given history window",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/history?metric=power&interval=5m&start=1",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "history"],
+              "query": [
+                {
+                  "key": "metric",
+                  "value": "power",
+                  "description": ""
+                },
+                {
+                  "key": "interval",
+                  "value": "5m",
+                  "description": ""
+                },
+                {
+                  "key": "start",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 ERR_HISTORY_WINDOW_INCOMPLETE', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().message).to.eql('ERR_HISTORY_WINDOW_INCOMPLETE'); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "400 invalid body (Gateway validation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/apps/{{appMount}}/api/commands/power-mode",
+              "host": ["{{gatewayUrl}}"],
+              "path": ["apps", "{{appMount}}", "api", "commands", "power-mode"]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"containerId\": \"{{containerId}}\"\n  },\n  \"mode\": \"turbo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('400', () => pm.response.to.have.status(400));"]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:3847",
+      "description": "The MDK Gateway (dev/mdk.yaml: port 3847). Through the dashboard's dev server use http://127.0.0.1:3030"
+    },
+    {
+      "key": "appMount",
+      "value": "op-centre-lite",
+      "description": "The app's name in mdk.yaml; its routes live under /apps/<name>"
+    },
+    {
+      "key": "username",
+      "value": "dev",
+      "description": "A user from `mdk user add`"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "description": "That user's password (12+ characters)"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "Set by the Login request"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "description": "Set by the Login request"
+    },
+    {
+      "key": "containerId",
+      "value": "container-1",
+      "description": "A container id from /api/containers (dev stack: container-1 to container-4)"
+    },
+    {
+      "key": "minerId",
+      "value": "miner-1-1-1",
+      "description": "A miner id from /api/miners (dev stack: miner-<container>-<rack>-<slot>)"
+    }
+  ]
+}

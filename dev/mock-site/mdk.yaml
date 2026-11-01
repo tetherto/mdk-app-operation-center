@@ -1,0 +1,22 @@
+# The app alone, on its in-memory site (`mock: true`): no workers, no devices.
+# For UI work. `npm run dev:stack:mock` boots it on the same ports as dev/mdk.yaml,
+# so the dashboard from `npm run dev:dashboard` works against either.
+apiVersion: mdk/v1
+kind: Stack
+metadata:
+  name: op-centre-lite-mock-site
+spec:
+  kernel:
+    port: 3848
+  gateway:
+    port: 3847
+    config: {}
+  workers: []
+  apps:
+    - name: op-centre-lite
+      package: op-centre-lite
+      config:
+        mock: true
+        siteName: "Mock Site"
+        # Set to false to try the hosted-demo (read-only) mode.
+        commandsEnabled: true

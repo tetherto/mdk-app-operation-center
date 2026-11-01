@@ -1,0 +1,46 @@
+# The app manifest `mdk run` reads; plugin/mdk-plugin.json holds the route table
+# (generated from ui-src/api/route-table.ts: npm run gen:routes).
+id: io.tether.opcentrelite
+version: 0.13.0
+displayName: "Operation Center Lite"
+description: "Single-site operations: site overview, efficiency, explorer, container detail and power commands."
+# Kernel access the app's service account needs: list the workers to find the
+# site's devices, read their telemetry and capabilities, send power commands.
+permissions:
+  - resources: [workers]
+    verbs: [list]
+  - resources: [devices]
+    verbs: [read, write]
+# Background work beside the route table: runs the history sampler on the
+# worker site (plugin/main.js).
+main: ./main.js#start
+# Defaults for the app's settings, overridden by its `config` in mdk.yaml. The
+# override replaces a whole top-level key, so give `layout`, `history` and
+# `commands` in full when you set them.
+config:
+  # Serve every route from an in-memory site instead of the workers.
+  mock: false
+  siteName: "Site"
+  # False on the hosted demo: command routes return 403 and the UI disables controls.
+  commandsEnabled: true
+  # The hosted demo's "Download the App" link (http or https). Unset, the
+  # banner shows no button.
+  downloadUrl: null
+  # Where the site's containers, racks and sockets are, and which device sits in
+  # each: MDK devices carry no position. Shape: ui-src/api/contract.ts
+  # (layoutSchema); README.md has an example. Empty until a site writes its own.
+  layout:
+    containers: []
+  # The app samples the fleet itself (the Kernel keeps no history) and serves
+  # /api/history from these samples, kept under the app's data dir.
+  history:
+    sampleIntervalMs: 60000
+    retentionDays: 30
+  # Commands fan out to the target miners with this many in flight. With
+  # `verify: true` a command route waits (up to 10 s) for the Kernel to report
+  # each command done and counts only the ones that succeeded.
+  commands:
+    concurrency: 8
+    verify: false
+  # One fleet read serves every route and the sampler for this long.
+  snapshotTtlMs: 5000

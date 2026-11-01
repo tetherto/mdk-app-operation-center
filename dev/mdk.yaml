@@ -1,0 +1,1089 @@
+# Local dev stack for Operation Center Lite. `mdk run --dir dev` boots the
+# Kernel, the vendor miner workers and a simulated power meter on mock devices,
+# this app (from the repo root, `..`) and the Gateway; `mdk run dashboard`
+# loads the app UI into a local dashboard. For UI work without the workers,
+# `npm run dev:stack:mock` runs dev/mock-site/mdk.yaml instead.
+#
+# The site: four containers, two racks of ten sockets each, the last two
+# sockets of rack 2 empty, one power meter per container. Containers 1 to 3
+# are Whatsminers (API v3 mock), container 4 is Antminers (CGI mock). Every
+# device id below appears once in the app's `layout`, which is what gives it
+# a container, rack and socket: MDK devices carry no position of their own.
+apiVersion: mdk/v1
+kind: Stack
+metadata:
+  name: op-centre-lite-dev
+spec:
+  kernel:
+    port: 3848
+  gateway:
+    port: 3847
+    config: {}
+  workers:
+    - name: miners-c1
+      package: whatsminer-mdk-worker
+      config:
+        mock: true
+        devices:
+          - id: miner-1-1-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18101,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1101,
+                ip: 10.1.1.21,
+                model: M56S,
+              }
+          - id: miner-1-1-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18102,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1102,
+                ip: 10.1.1.22,
+                model: M56S,
+              }
+          - id: miner-1-1-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18103,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1103,
+                ip: 10.1.1.23,
+                model: M56S,
+              }
+          - id: miner-1-1-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18104,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1104,
+                ip: 10.1.1.24,
+                model: M56S,
+              }
+          - id: miner-1-1-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18105,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1105,
+                ip: 10.1.1.25,
+                model: M56S,
+              }
+          - id: miner-1-1-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18106,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1106,
+                ip: 10.1.1.26,
+                model: M56S,
+              }
+          - id: miner-1-1-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18107,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1107,
+                ip: 10.1.1.27,
+                model: M56S,
+              }
+          - id: miner-1-1-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18108,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1108,
+                ip: 10.1.1.28,
+                model: M56S,
+              }
+          - id: miner-1-1-9
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18109,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1109,
+                ip: 10.1.1.29,
+                model: M56S,
+              }
+          - id: miner-1-1-10
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18110,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1110,
+                ip: 10.1.1.30,
+                model: M56S,
+              }
+          - id: miner-1-2-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18111,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1201,
+                ip: 10.1.1.41,
+                model: M56S,
+              }
+          - id: miner-1-2-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18112,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1202,
+                ip: 10.1.1.42,
+                model: M56S,
+              }
+          - id: miner-1-2-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18113,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1203,
+                ip: 10.1.1.43,
+                model: M56S,
+              }
+          - id: miner-1-2-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18114,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1204,
+                ip: 10.1.1.44,
+                model: M56S,
+              }
+          - id: miner-1-2-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18115,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1205,
+                ip: 10.1.1.45,
+                model: M56S,
+              }
+          - id: miner-1-2-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18116,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1206,
+                ip: 10.1.1.46,
+                model: M56S,
+              }
+          - id: miner-1-2-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18117,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1207,
+                ip: 10.1.1.47,
+                model: M56S,
+              }
+          - id: miner-1-2-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18118,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM1208,
+                ip: 10.1.1.48,
+                model: M56S,
+              }
+    - name: miners-c2
+      package: whatsminer-mdk-worker
+      config:
+        mock: true
+        devices:
+          - id: miner-2-1-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18119,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2101,
+                ip: 10.1.2.21,
+                model: M56S,
+              }
+          - id: miner-2-1-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18120,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2102,
+                ip: 10.1.2.22,
+                model: M56S,
+              }
+          - id: miner-2-1-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18121,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2103,
+                ip: 10.1.2.23,
+                model: M56S,
+              }
+          - id: miner-2-1-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18122,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2104,
+                ip: 10.1.2.24,
+                model: M56S,
+              }
+          - id: miner-2-1-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18123,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2105,
+                ip: 10.1.2.25,
+                model: M56S,
+              }
+          - id: miner-2-1-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18124,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2106,
+                ip: 10.1.2.26,
+                model: M56S,
+              }
+          - id: miner-2-1-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18125,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2107,
+                ip: 10.1.2.27,
+                model: M56S,
+              }
+          - id: miner-2-1-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18126,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2108,
+                ip: 10.1.2.28,
+                model: M56S,
+              }
+          - id: miner-2-1-9
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18127,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2109,
+                ip: 10.1.2.29,
+                model: M56S,
+              }
+          - id: miner-2-1-10
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18128,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2110,
+                ip: 10.1.2.30,
+                model: M56S,
+              }
+          - id: miner-2-2-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18129,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2201,
+                ip: 10.1.2.41,
+                model: M56S,
+              }
+          - id: miner-2-2-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18130,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2202,
+                ip: 10.1.2.42,
+                model: M56S,
+              }
+          - id: miner-2-2-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18131,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2203,
+                ip: 10.1.2.43,
+                model: M56S,
+              }
+          - id: miner-2-2-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18132,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2204,
+                ip: 10.1.2.44,
+                model: M56S,
+              }
+          - id: miner-2-2-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18133,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2205,
+                ip: 10.1.2.45,
+                model: M56S,
+              }
+          - id: miner-2-2-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18134,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2206,
+                ip: 10.1.2.46,
+                model: M56S,
+              }
+          - id: miner-2-2-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18135,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2207,
+                ip: 10.1.2.47,
+                model: M56S,
+              }
+          - id: miner-2-2-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18136,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM2208,
+                ip: 10.1.2.48,
+                model: M56S,
+              }
+    - name: miners-c3
+      package: whatsminer-mdk-worker
+      config:
+        mock: true
+        devices:
+          - id: miner-3-1-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18137,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3101,
+                ip: 10.1.3.21,
+                model: M56S,
+              }
+          - id: miner-3-1-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18138,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3102,
+                ip: 10.1.3.22,
+                model: M56S,
+              }
+          - id: miner-3-1-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18139,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3103,
+                ip: 10.1.3.23,
+                model: M56S,
+              }
+          - id: miner-3-1-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18140,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3104,
+                ip: 10.1.3.24,
+                model: M56S,
+              }
+          - id: miner-3-1-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18141,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3105,
+                ip: 10.1.3.25,
+                model: M56S,
+              }
+          - id: miner-3-1-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18142,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3106,
+                ip: 10.1.3.26,
+                model: M56S,
+              }
+          - id: miner-3-1-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18143,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3107,
+                ip: 10.1.3.27,
+                model: M56S,
+              }
+          - id: miner-3-1-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18144,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3108,
+                ip: 10.1.3.28,
+                model: M56S,
+              }
+          - id: miner-3-1-9
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18145,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3109,
+                ip: 10.1.3.29,
+                model: M56S,
+              }
+          - id: miner-3-1-10
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18146,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3110,
+                ip: 10.1.3.30,
+                model: M56S,
+              }
+          - id: miner-3-2-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18147,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3201,
+                ip: 10.1.3.41,
+                model: M56S,
+              }
+          - id: miner-3-2-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18148,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3202,
+                ip: 10.1.3.42,
+                model: M56S,
+              }
+          - id: miner-3-2-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18149,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3203,
+                ip: 10.1.3.43,
+                model: M56S,
+              }
+          - id: miner-3-2-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18150,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3204,
+                ip: 10.1.3.44,
+                model: M56S,
+              }
+          - id: miner-3-2-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18151,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3205,
+                ip: 10.1.3.45,
+                model: M56S,
+              }
+          - id: miner-3-2-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18152,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3206,
+                ip: 10.1.3.46,
+                model: M56S,
+              }
+          - id: miner-3-2-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18153,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3207,
+                ip: 10.1.3.47,
+                model: M56S,
+              }
+          - id: miner-3-2-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18154,
+                password: super,
+                apiVersion: 3.0.3,
+                type: miner-wm-m56s,
+                serial: WM3208,
+                ip: 10.1.3.48,
+                model: M56S,
+              }
+    - name: miners-c4
+      package: antminer-mdk-worker
+      config:
+        mock: true
+        devices:
+          - id: miner-4-1-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18155,
+                username: root,
+                password: root,
+                serial: AM4101,
+                ip: 10.1.4.21,
+                model: S21,
+              }
+          - id: miner-4-1-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18156,
+                username: root,
+                password: root,
+                serial: AM4102,
+                ip: 10.1.4.22,
+                model: S21,
+              }
+          - id: miner-4-1-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18157,
+                username: root,
+                password: root,
+                serial: AM4103,
+                ip: 10.1.4.23,
+                model: S21,
+              }
+          - id: miner-4-1-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18158,
+                username: root,
+                password: root,
+                serial: AM4104,
+                ip: 10.1.4.24,
+                model: S21,
+              }
+          - id: miner-4-1-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18159,
+                username: root,
+                password: root,
+                serial: AM4105,
+                ip: 10.1.4.25,
+                model: S21,
+              }
+          - id: miner-4-1-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18160,
+                username: root,
+                password: root,
+                serial: AM4106,
+                ip: 10.1.4.26,
+                model: S21,
+              }
+          - id: miner-4-1-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18161,
+                username: root,
+                password: root,
+                serial: AM4107,
+                ip: 10.1.4.27,
+                model: S21,
+              }
+          - id: miner-4-1-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18162,
+                username: root,
+                password: root,
+                serial: AM4108,
+                ip: 10.1.4.28,
+                model: S21,
+              }
+          - id: miner-4-1-9
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18163,
+                username: root,
+                password: root,
+                serial: AM4109,
+                ip: 10.1.4.29,
+                model: S21,
+              }
+          - id: miner-4-1-10
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18164,
+                username: root,
+                password: root,
+                serial: AM4110,
+                ip: 10.1.4.30,
+                model: S21,
+              }
+          - id: miner-4-2-1
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18165,
+                username: root,
+                password: root,
+                serial: AM4201,
+                ip: 10.1.4.41,
+                model: S21,
+              }
+          - id: miner-4-2-2
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18166,
+                username: root,
+                password: root,
+                serial: AM4202,
+                ip: 10.1.4.42,
+                model: S21,
+              }
+          - id: miner-4-2-3
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18167,
+                username: root,
+                password: root,
+                serial: AM4203,
+                ip: 10.1.4.43,
+                model: S21,
+              }
+          - id: miner-4-2-4
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18168,
+                username: root,
+                password: root,
+                serial: AM4204,
+                ip: 10.1.4.44,
+                model: S21,
+              }
+          - id: miner-4-2-5
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18169,
+                username: root,
+                password: root,
+                serial: AM4205,
+                ip: 10.1.4.45,
+                model: S21,
+              }
+          - id: miner-4-2-6
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18170,
+                username: root,
+                password: root,
+                serial: AM4206,
+                ip: 10.1.4.46,
+                model: S21,
+              }
+          - id: miner-4-2-7
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18171,
+                username: root,
+                password: root,
+                serial: AM4207,
+                ip: 10.1.4.47,
+                model: S21,
+              }
+          - id: miner-4-2-8
+            opts:
+              {
+                address: 127.0.0.1,
+                port: 18172,
+                username: root,
+                password: root,
+                serial: AM4208,
+                ip: 10.1.4.48,
+                model: S21,
+              }
+    - name: meters
+      package: powermeter-sim
+      config:
+        mock: true
+        devices:
+          - id: meter-1
+            opts: { host: 127.0.0.1, port: 18173, baseW: 62000 }
+          - id: meter-2
+            opts: { host: 127.0.0.1, port: 18174, baseW: 62000 }
+          - id: meter-3
+            opts: { host: 127.0.0.1, port: 18175, baseW: 62000 }
+          - id: meter-4
+            opts: { host: 127.0.0.1, port: 18176, baseW: 64000 }
+  apps:
+    - name: op-centre-lite
+      package: op-centre-lite
+      config:
+        mock: false
+        siteName: "Dev Site"
+        # Set to false to try the hosted-demo (read-only) mode.
+        commandsEnabled: true
+        layout:
+          containers:
+            - id: container-1
+              name: Container 1
+              model: MicroBT WhatsMiner M56S
+              nominalHashrateThs: 110
+              meterDeviceId: meter-1
+              racks:
+                - id: container-1-rack-1
+                  name: Rack 1
+                  sockets:
+                    - { position: "1-1-1", deviceId: miner-1-1-1 }
+                    - { position: "1-1-2", deviceId: miner-1-1-2 }
+                    - { position: "1-1-3", deviceId: miner-1-1-3 }
+                    - { position: "1-1-4", deviceId: miner-1-1-4 }
+                    - { position: "1-1-5", deviceId: miner-1-1-5 }
+                    - { position: "1-1-6", deviceId: miner-1-1-6 }
+                    - { position: "1-1-7", deviceId: miner-1-1-7 }
+                    - { position: "1-1-8", deviceId: miner-1-1-8 }
+                    - { position: "1-1-9", deviceId: miner-1-1-9 }
+                    - { position: "1-1-10", deviceId: miner-1-1-10 }
+                - id: container-1-rack-2
+                  name: Rack 2
+                  sockets:
+                    - { position: "1-2-1", deviceId: miner-1-2-1 }
+                    - { position: "1-2-2", deviceId: miner-1-2-2 }
+                    - { position: "1-2-3", deviceId: miner-1-2-3 }
+                    - { position: "1-2-4", deviceId: miner-1-2-4 }
+                    - { position: "1-2-5", deviceId: miner-1-2-5 }
+                    - { position: "1-2-6", deviceId: miner-1-2-6 }
+                    - { position: "1-2-7", deviceId: miner-1-2-7 }
+                    - { position: "1-2-8", deviceId: miner-1-2-8 }
+                    - { position: "1-2-9", deviceId: null }
+                    - { position: "1-2-10", deviceId: null }
+            - id: container-2
+              name: Container 2
+              model: MicroBT WhatsMiner M56S
+              nominalHashrateThs: 110
+              meterDeviceId: meter-2
+              racks:
+                - id: container-2-rack-1
+                  name: Rack 1
+                  sockets:
+                    - { position: "2-1-1", deviceId: miner-2-1-1 }
+                    - { position: "2-1-2", deviceId: miner-2-1-2 }
+                    - { position: "2-1-3", deviceId: miner-2-1-3 }
+                    - { position: "2-1-4", deviceId: miner-2-1-4 }
+                    - { position: "2-1-5", deviceId: miner-2-1-5 }
+                    - { position: "2-1-6", deviceId: miner-2-1-6 }
+                    - { position: "2-1-7", deviceId: miner-2-1-7 }
+                    - { position: "2-1-8", deviceId: miner-2-1-8 }
+                    - { position: "2-1-9", deviceId: miner-2-1-9 }
+                    - { position: "2-1-10", deviceId: miner-2-1-10 }
+                - id: container-2-rack-2
+                  name: Rack 2
+                  sockets:
+                    - { position: "2-2-1", deviceId: miner-2-2-1 }
+                    - { position: "2-2-2", deviceId: miner-2-2-2 }
+                    - { position: "2-2-3", deviceId: miner-2-2-3 }
+                    - { position: "2-2-4", deviceId: miner-2-2-4 }
+                    - { position: "2-2-5", deviceId: miner-2-2-5 }
+                    - { position: "2-2-6", deviceId: miner-2-2-6 }
+                    - { position: "2-2-7", deviceId: miner-2-2-7 }
+                    - { position: "2-2-8", deviceId: miner-2-2-8 }
+                    - { position: "2-2-9", deviceId: null }
+                    - { position: "2-2-10", deviceId: null }
+            - id: container-3
+              name: Container 3
+              model: MicroBT WhatsMiner M56S
+              nominalHashrateThs: 110
+              meterDeviceId: meter-3
+              racks:
+                - id: container-3-rack-1
+                  name: Rack 1
+                  sockets:
+                    - { position: "3-1-1", deviceId: miner-3-1-1 }
+                    - { position: "3-1-2", deviceId: miner-3-1-2 }
+                    - { position: "3-1-3", deviceId: miner-3-1-3 }
+                    - { position: "3-1-4", deviceId: miner-3-1-4 }
+                    - { position: "3-1-5", deviceId: miner-3-1-5 }
+                    - { position: "3-1-6", deviceId: miner-3-1-6 }
+                    - { position: "3-1-7", deviceId: miner-3-1-7 }
+                    - { position: "3-1-8", deviceId: miner-3-1-8 }
+                    - { position: "3-1-9", deviceId: miner-3-1-9 }
+                    - { position: "3-1-10", deviceId: miner-3-1-10 }
+                - id: container-3-rack-2
+                  name: Rack 2
+                  sockets:
+                    - { position: "3-2-1", deviceId: miner-3-2-1 }
+                    - { position: "3-2-2", deviceId: miner-3-2-2 }
+                    - { position: "3-2-3", deviceId: miner-3-2-3 }
+                    - { position: "3-2-4", deviceId: miner-3-2-4 }
+                    - { position: "3-2-5", deviceId: miner-3-2-5 }
+                    - { position: "3-2-6", deviceId: miner-3-2-6 }
+                    - { position: "3-2-7", deviceId: miner-3-2-7 }
+                    - { position: "3-2-8", deviceId: miner-3-2-8 }
+                    - { position: "3-2-9", deviceId: null }
+                    - { position: "3-2-10", deviceId: null }
+            - id: container-4
+              name: Container 4
+              model: Bitmain Antminer S21
+              nominalHashrateThs: 200
+              meterDeviceId: meter-4
+              racks:
+                - id: container-4-rack-1
+                  name: Rack 1
+                  sockets:
+                    - { position: "4-1-1", deviceId: miner-4-1-1 }
+                    - { position: "4-1-2", deviceId: miner-4-1-2 }
+                    - { position: "4-1-3", deviceId: miner-4-1-3 }
+                    - { position: "4-1-4", deviceId: miner-4-1-4 }
+                    - { position: "4-1-5", deviceId: miner-4-1-5 }
+                    - { position: "4-1-6", deviceId: miner-4-1-6 }
+                    - { position: "4-1-7", deviceId: miner-4-1-7 }
+                    - { position: "4-1-8", deviceId: miner-4-1-8 }
+                    - { position: "4-1-9", deviceId: miner-4-1-9 }
+                    - { position: "4-1-10", deviceId: miner-4-1-10 }
+                - id: container-4-rack-2
+                  name: Rack 2
+                  sockets:
+                    - { position: "4-2-1", deviceId: miner-4-2-1 }
+                    - { position: "4-2-2", deviceId: miner-4-2-2 }
+                    - { position: "4-2-3", deviceId: miner-4-2-3 }
+                    - { position: "4-2-4", deviceId: miner-4-2-4 }
+                    - { position: "4-2-5", deviceId: miner-4-2-5 }
+                    - { position: "4-2-6", deviceId: miner-4-2-6 }
+                    - { position: "4-2-7", deviceId: miner-4-2-7 }
+                    - { position: "4-2-8", deviceId: miner-4-2-8 }
+                    - { position: "4-2-9", deviceId: null }
+                    - { position: "4-2-10", deviceId: null }
+      serviceAccount: app:op-centre-lite
+      permissionsDigest: a4e71417ef246cf9
+  # Written by `mdk rbac init` and `mdk user add dev --admin`; see README.md.
+  rbac:
+    enforcement: deny
+    roles:
+      - name: admin
+        rules:
+          - resources:
+              - "*"
+            verbs:
+              - "*"
+      - name: gateway
+        rules:
+          - resources:
+              - policy
+            verbs:
+              - read
+      - name: app-op-centre-lite
+        rules:
+          - resources:
+              - workers
+            verbs:
+              - list
+          - resources:
+              - devices
+            verbs:
+              - read
+              - write
+    bindings:
+      - role: admin
+        subjects:
+          - kind: ServiceAccount
+            name: mdk-cli
+      - role: gateway
+        subjects:
+          - kind: ServiceAccount
+            name: mdk-gateway
+      - role: gateway
+        subjects:
+          - kind: ServiceAccount
+            name: mdk-mcp
+      - role: app-op-centre-lite
+        subjects:
+          - kind: ServiceAccount
+            name: app:op-centre-lite
+      - role: admin
+        subjects:
+          - kind: User
+            name: dev
