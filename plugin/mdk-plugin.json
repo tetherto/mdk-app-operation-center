@@ -1,0 +1,1274 @@
+{
+  "name": "@tetherto/mdk-app-operation-center",
+  "version": "0.13.0",
+  "description": "Operation Center Lite routes: site summary, containers, history, power meters, miners and power commands.",
+  "routes": [
+    {
+      "id": "op-centre-lite.config",
+      "handler": "./controllers/config.js",
+      "safety": "read-only",
+      "description": "Site name and whether commands are on.",
+      "http": {
+        "method": "GET",
+        "path": "/api/config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "siteName": {
+                      "type": "string"
+                    },
+                    "commandsEnabled": {
+                      "type": "boolean"
+                    },
+                    "downloadUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "siteName",
+                    "commandsEnabled",
+                    "downloadUrl"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "op-centre-lite.site-summary",
+      "handler": "./controllers/site-summary.js",
+      "safety": "read-only",
+      "description": "Site-wide miner counts, hashrate and power.",
+      "http": {
+        "method": "GET",
+        "path": "/api/site/summary",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "miners": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "online": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "error": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "offline": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "online",
+                        "error",
+                        "offline"
+                      ]
+                    },
+                    "hashrateThs": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "powerW": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "miners",
+                    "hashrateThs",
+                    "powerW"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "op-centre-lite.containers",
+      "handler": "./controllers/containers.js",
+      "safety": "read-only",
+      "description": "Every container with its racks, totals and miner status counts.",
+      "http": {
+        "method": "GET",
+        "path": "/api/containers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "containers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          },
+                          "hashrateThs": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "powerW": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "powerMode": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sleep",
+                                  "low",
+                                  "normal",
+                                  "high"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "powerPct": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "supportedPowerModes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "sleep",
+                                "low",
+                                "normal",
+                                "high"
+                              ]
+                            }
+                          },
+                          "minerStatus": {
+                            "type": "object",
+                            "properties": {
+                              "offline": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "error": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "sleep": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "low": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "normal": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "high": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "empty": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "offline",
+                              "error",
+                              "sleep",
+                              "low",
+                              "normal",
+                              "high",
+                              "empty"
+                            ]
+                          },
+                          "racks": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "containerId": {
+                                  "type": "string"
+                                },
+                                "hashrateThs": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "powerW": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "minerStatus": {
+                                  "type": "object",
+                                  "properties": {
+                                    "offline": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "error": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "sleep": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "low": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "normal": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "high": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "empty": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "offline",
+                                    "error",
+                                    "sleep",
+                                    "low",
+                                    "normal",
+                                    "high",
+                                    "empty"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "containerId",
+                                "hashrateThs",
+                                "powerW",
+                                "minerStatus"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "model",
+                          "hashrateThs",
+                          "powerW",
+                          "powerMode",
+                          "powerPct",
+                          "supportedPowerModes",
+                          "minerStatus",
+                          "racks"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "containers"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "op-centre-lite.container-layout",
+      "handler": "./controllers/container-layout.js",
+      "safety": "read-only",
+      "description": "The socket grid of one container, with the miner in each socket.",
+      "http": {
+        "method": "GET",
+        "path": "/api/containers/:id/layout",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "container": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "model": {
+                          "type": "string"
+                        },
+                        "hashrateThs": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "powerW": {
+                          "type": "number",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "model",
+                        "hashrateThs",
+                        "powerW"
+                      ]
+                    },
+                    "racks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "sockets": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "position": {
+                                  "type": "string"
+                                },
+                                "miner": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "serial": {
+                                          "type": "string"
+                                        },
+                                        "ip": {
+                                          "type": "string"
+                                        },
+                                        "containerId": {
+                                          "type": "string"
+                                        },
+                                        "rackId": {
+                                          "type": "string"
+                                        },
+                                        "position": {
+                                          "type": "string"
+                                        },
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "offline",
+                                            "error",
+                                            "sleep",
+                                            "low",
+                                            "normal",
+                                            "high"
+                                          ]
+                                        },
+                                        "powerMode": {
+                                          "type": "string",
+                                          "enum": [
+                                            "sleep",
+                                            "low",
+                                            "normal",
+                                            "high"
+                                          ]
+                                        },
+                                        "powerPct": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 100
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "supportedPowerModes": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "enum": [
+                                              "sleep",
+                                              "low",
+                                              "normal",
+                                              "high"
+                                            ]
+                                          }
+                                        },
+                                        "hashrateThs": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        "powerW": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        "frequencyMhz": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        "inletTempC": {
+                                          "type": "number"
+                                        },
+                                        "chipTempC": {
+                                          "type": "number"
+                                        },
+                                        "uptimeS": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        "lastUpdate": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "serial",
+                                        "ip",
+                                        "containerId",
+                                        "rackId",
+                                        "position",
+                                        "status",
+                                        "powerMode",
+                                        "powerPct",
+                                        "supportedPowerModes",
+                                        "hashrateThs",
+                                        "powerW",
+                                        "frequencyMhz",
+                                        "inletTempC",
+                                        "chipTempC",
+                                        "uptimeS",
+                                        "lastUpdate"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "position",
+                                "miner"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "sockets"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "container",
+                    "racks"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": {
+        "ERR_CONTAINER_NOT_FOUND": "404: no container with this id"
+      }
+    },
+    {
+      "id": "op-centre-lite.history",
+      "handler": "./controllers/history.js",
+      "safety": "read-only",
+      "description": "Hashrate or power over time, one point per `interval` bucket, site-wide or for one container or rack. Returns the last `limit` buckets ending now (default 288), or every bucket between `start` and `end` (ms epoch).",
+      "http": {
+        "method": "GET",
+        "path": "/api/history",
+        "parameters": [
+          {
+            "name": "metric",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "hashrate",
+                "power"
+              ]
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "5m",
+                "30m",
+                "3h",
+                "1d"
+              ]
+            }
+          },
+          {
+            "name": "containerId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rackId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "metric": {
+                          "type": "string",
+                          "const": "hashrate"
+                        },
+                        "interval": {
+                          "type": "string",
+                          "enum": [
+                            "5m",
+                            "30m",
+                            "3h",
+                            "1d"
+                          ]
+                        },
+                        "unit": {
+                          "type": "string",
+                          "const": "TH/s"
+                        },
+                        "points": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "ts": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "value": {
+                                "type": "number",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "ts",
+                              "value"
+                            ]
+                          }
+                        },
+                        "nominal": {
+                          "type": "number",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "metric",
+                        "interval",
+                        "unit",
+                        "points",
+                        "nominal"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "metric": {
+                          "type": "string",
+                          "const": "power"
+                        },
+                        "interval": {
+                          "type": "string",
+                          "enum": [
+                            "5m",
+                            "30m",
+                            "3h",
+                            "1d"
+                          ]
+                        },
+                        "unit": {
+                          "type": "string",
+                          "const": "W"
+                        },
+                        "points": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "ts": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "value": {
+                                "type": "number",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "ts",
+                              "value"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "metric",
+                        "interval",
+                        "unit",
+                        "points"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": {
+        "ERR_HISTORY_WINDOW_INCOMPLETE": "400: only one of `start` and `end` was given",
+        "ERR_HISTORY_WINDOW_INVALID": "400: `start` is after `end`",
+        "ERR_HISTORY_WINDOW_TOO_LARGE": "400: `start` to `end` spans more than 1000 buckets of `interval`"
+      }
+    },
+    {
+      "id": "op-centre-lite.power-meters",
+      "handler": "./controllers/power-meters.js",
+      "safety": "read-only",
+      "description": "Site meter power, the miners own power, and one entry per power meter.",
+      "http": {
+        "method": "GET",
+        "path": "/api/power-meters",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "siteMeterPowerW": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "minersPowerW": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "hashrateThs": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "meters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "containerId": {
+                            "type": "string"
+                          },
+                          "powerW": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "hashrateThs": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "miners": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "containerId",
+                          "powerW",
+                          "hashrateThs",
+                          "miners"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "siteMeterPowerW",
+                    "minersPowerW",
+                    "hashrateThs",
+                    "meters"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "op-centre-lite.miners",
+      "handler": "./controllers/miners.js",
+      "safety": "read-only",
+      "description": "One page of miners (default 20, at most 200), optionally narrowed to a container or a search over id, serial, IP and position.",
+      "http": {
+        "method": "GET",
+        "path": "/api/miners",
+        "parameters": [
+          {
+            "name": "containerId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "serial": {
+                            "type": "string"
+                          },
+                          "ip": {
+                            "type": "string"
+                          },
+                          "containerId": {
+                            "type": "string"
+                          },
+                          "rackId": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "offline",
+                              "error",
+                              "sleep",
+                              "low",
+                              "normal",
+                              "high"
+                            ]
+                          },
+                          "powerMode": {
+                            "type": "string",
+                            "enum": [
+                              "sleep",
+                              "low",
+                              "normal",
+                              "high"
+                            ]
+                          },
+                          "powerPct": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "supportedPowerModes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "sleep",
+                                "low",
+                                "normal",
+                                "high"
+                              ]
+                            }
+                          },
+                          "hashrateThs": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "powerW": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "frequencyMhz": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "inletTempC": {
+                            "type": "number"
+                          },
+                          "chipTempC": {
+                            "type": "number"
+                          },
+                          "uptimeS": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "lastUpdate": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "serial",
+                          "ip",
+                          "containerId",
+                          "rackId",
+                          "position",
+                          "status",
+                          "powerMode",
+                          "powerPct",
+                          "supportedPowerModes",
+                          "hashrateThs",
+                          "powerW",
+                          "frequencyMhz",
+                          "inletTempC",
+                          "chipTempC",
+                          "uptimeS",
+                          "lastUpdate"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "page": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "op-centre-lite.miner-logs",
+      "handler": "./controllers/miner-logs.js",
+      "safety": "read-only",
+      "description": "The log archive of one miner, as a file download (the worker's `downloadLogs` result).",
+      "stream": true,
+      "http": {
+        "method": "GET",
+        "path": "/api/miners/:id/logs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            }
+          }
+        }
+      },
+      "errors": {
+        "ERR_MINER_NOT_FOUND": "404: no miner with this id",
+        "ERR_LOGS_UNSUPPORTED": "501: this miner's worker has no `downloadLogs` command",
+        "ERR_LOGS_FAILED": "502: the worker did not produce the archive"
+      }
+    },
+    {
+      "id": "op-centre-lite.power-mode",
+      "handler": "./controllers/power-mode.js",
+      "safety": "write",
+      "description": "Set the power mode of a container or of selected miners. Miners that do not support the mode are skipped. Applies directly, with no approval step.",
+      "auth": true,
+      "http": {
+        "method": "POST",
+        "path": "/api/commands/power-mode",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "containerId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "containerId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "minerIds": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "minerIds"
+                        ]
+                      }
+                    ]
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "sleep",
+                      "low",
+                      "normal",
+                      "high"
+                    ]
+                  }
+                },
+                "required": [
+                  "target",
+                  "mode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean"
+                    },
+                    "minerCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "accepted",
+                    "minerCount"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": {
+        "ERR_COMMANDS_DISABLED": "403: commands are off on this site (hosted demo)"
+      }
+    },
+    {
+      "id": "op-centre-lite.power-pct",
+      "handler": "./controllers/power-pct.js",
+      "safety": "write",
+      "description": "Set the power percentage of a container or of selected miners. Applies directly, with no approval step.",
+      "auth": true,
+      "http": {
+        "method": "POST",
+        "path": "/api/commands/power-pct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "containerId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "containerId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "minerIds": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "minerIds"
+                        ]
+                      }
+                    ]
+                  },
+                  "pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "target",
+                  "pct"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean"
+                    },
+                    "minerCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "accepted",
+                    "minerCount"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": {
+        "ERR_COMMANDS_DISABLED": "403: commands are off on this site (hosted demo)"
+      }
+    }
+  ]
+}

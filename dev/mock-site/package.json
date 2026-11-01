@@ -1,0 +1,9 @@
+{
+  "name": "op-centre-lite-mock-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The app alone on its in-memory site, for UI work: `mdk run --dir dev/mock-site`.",
+  "dependencies": {
+    "op-centre-lite": "file:../.."
+  }
+}

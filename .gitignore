@@ -1,0 +1,22 @@
+node_modules/
+# The MDK SDK, linked or cloned by scripts/setup-mdk.sh
+.mdk-sdk
+# Local dev stack state and the dashboard `mdk create dashboard` scaffolds into it
+dev/.mdk/
+dev/apps/
+dev/node_modules/
+dev/.env
+dev/package-lock.json
+dev/mock-site/.mdk/
+dev/mock-site/apps/
+dev/mock-site/node_modules/
+dev/mock-site/.env
+dev/mock-site/package-lock.json
+*.tsbuildinfo
+*.log
+.env
+.env.local
+coverage/
+# MDK Agent Skills, installed per machine by `npm run mdk -- skill add --dir .`
+.claude/skills/
+.cursor/skills/
