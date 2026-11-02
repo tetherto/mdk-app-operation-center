@@ -7,7 +7,8 @@ const FILE = "history.jsonl";
 const DAY_MS = 24 * 60 * 60_000;
 
 /**
- * The app's own telemetry history (the Kernel keeps none): one record per
+ * The app's own telemetry history, served when the Workers keep none the
+ * Kernel can read (./history-snapshot.js): one record per
  * sample and scope, `{ ts, scope, hashrateThs, powerW, miners }`, with scope
  * "site", "container:<id>" or "rack:<id>". Kept in memory and appended to
  * history.jsonl under the app's data dir, so a restart keeps the series;

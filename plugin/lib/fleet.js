@@ -111,4 +111,4 @@ function createFleet({ client, topology, concurrency = 8, logger }) {
   };
 }
 
-module.exports = { createFleet, runBounded };
+module.exports = { GONE_WORKER_STATES, createFleet, runBounded };

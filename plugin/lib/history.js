@@ -9,11 +9,10 @@ const scopeOf = (query) => {
 };
 
 /**
- * A history series from the store: one point per bucket of the resolved
- * query (./history-window.js), each the average of the samples in it. A
- * bucket with no sample is left out rather than zero-filled, so a gap
- * (restart, Kernel down) shows as a gap. `nominal` is the sum of the layout's
- * nominal hashrate over the scope's occupied sockets.
+ * A history series from the app's own samples: one point per bucket of the
+ * resolved query (./history-window.js), each the average of the samples in
+ * it. A bucket with no sample is left out rather than zero-filled, so a gap
+ * (restart, Kernel down) shows as a gap.
  */
 function historySeries({ topology, store, query, now = Date.now() }) {
   const scope = scopeOf(query);
@@ -26,6 +25,15 @@ function historySeries({ topology, store, query, now = Date.now() }) {
     const sum = samples.reduce((total, sample) => total + sample[field], 0);
     points.push({ ts, value: sum / samples.length });
   }
+  return shapeSeries(topology, query, points);
+}
+
+/**
+ * The contract's History body around a series of `{ ts, value }` points.
+ * `nominal` is the sum of the layout's nominal hashrate over the scope's
+ * occupied sockets.
+ */
+function shapeSeries(topology, query, points) {
   if (query.metric === "power") {
     return { metric: "power", interval: query.interval, unit: "W", points };
   }
@@ -48,4 +56,4 @@ function nominalOf(topology, { containerId, rackId }) {
   return nominal;
 }
 
-module.exports = { historySeries, nominalOf, scopeOf };
+module.exports = { historySeries, nominalOf, scopeOf, shapeSeries };

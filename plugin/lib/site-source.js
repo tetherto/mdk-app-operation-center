@@ -8,6 +8,7 @@ const { settings } = require("./config");
 const { httpError } = require("./errors");
 const { createFleet } = require("./fleet");
 const { historySeries } = require("./history");
+const { createSnapshotHistory } = require("./history-snapshot");
 const { createLogs } = require("./logs");
 const { createMockSite } = require("./mock-site");
 const { createSnapshotCache } = require("./snapshot");
@@ -47,8 +48,11 @@ function createWorkerSite() {
     logger,
   });
   const logs = createLogs({ topology, fleet });
-  // Attached by main.js once the sampler's store is open; until then the
-  // series is empty rather than an error.
+  // History comes from the Workers' telemetry stores when the stack has the
+  // snapshot read (./history-snapshot.js), else from the app's own samples.
+  // The sampler's store is attached by main.js once it is open; until then
+  // the fallback series is empty rather than an error.
+  const snapshotHistory = createSnapshotHistory({ client, topology, logger });
   let store = { query: () => [] };
 
   return {
@@ -62,7 +66,8 @@ function createWorkerSite() {
     containerLayout: async (id) => aggregate.containerLayout(topology, await snapshots.get(), id),
     powerMeters: async () => aggregate.powerMeters(topology, await snapshots.get()),
     miners: async (query) => aggregate.miners(topology, await snapshots.get(), query),
-    history: async (query) => historySeries({ topology, store, query }),
+    history: async (query) =>
+      (await snapshotHistory.series(query)) ?? historySeries({ topology, store, query }),
     minerLogs: (id, mdk) => logs(mdk, id),
     setPowerMode: (target, mode, mdk) => commands.setPowerMode(mdk, target, mode),
     setPowerPct: (target, pct, mdk) => commands.setPowerPct(mdk, target, pct),

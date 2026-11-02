@@ -31,8 +31,9 @@ config:
   # (layoutSchema); README.md has an example. Empty until a site writes its own.
   layout:
     containers: []
-  # The app samples the fleet itself (the Kernel keeps no history) and serves
-  # /api/history from these samples, kept under the app's data dir.
+  # /api/history reads the Workers' telemetry stores when the stack has them
+  # (MDK after 0.13.0, Workers that set telemetryPollIntervalMs). Otherwise the
+  # app samples the fleet itself and serves these samples, kept under its data dir.
   history:
     sampleIntervalMs: 60000
     retentionDays: 30

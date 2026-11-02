@@ -24,6 +24,9 @@ spec:
       package: whatsminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-1-1-1
             opts:
@@ -245,6 +248,9 @@ spec:
       package: whatsminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-2-1-1
             opts:
@@ -466,6 +472,9 @@ spec:
       package: whatsminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-3-1-1
             opts:
@@ -687,6 +696,9 @@ spec:
       package: antminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-4-1-1
             opts:
