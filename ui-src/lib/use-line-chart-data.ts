@@ -16,7 +16,12 @@ import { type MutableRefObject, useEffect, useMemo, useRef, useState } from "rea
  */
 export const useLineChartData = (
   data: LineChartCardData,
-): { data: LineChartCardData; chartRef: MutableRefObject<IChartApi | null> } => {
+): {
+  data: LineChartCardData;
+  chartRef: MutableRefObject<IChartApi | null>;
+  /** True once the chart exists, so series of one's own can be added to it. */
+  chartReady: boolean;
+} => {
   const chartRef = useRef<IChartApi | null>(null);
   const [chartReady, setChartReady] = useState(false);
 
@@ -37,5 +42,5 @@ export const useLineChartData = (
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [data, chartReady],
   );
-  return { data: handedOver, chartRef };
+  return { data: handedOver, chartRef, chartReady };
 };

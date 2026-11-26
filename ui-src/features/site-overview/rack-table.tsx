@@ -5,26 +5,28 @@ import type { RackRow } from "./container-card-shape";
 
 // DataTable sets each column's width to its `size` (150px by default), so four
 // default columns overflow a card. A small size lets them share the card width.
+// The whole card is the click target, so the headers do not sort either.
 const COLUMN_SIZE = 1;
+const COLUMN_DEFAULTS = { size: COLUMN_SIZE, enableSorting: false } as const;
 
 const COLUMNS: DataTableColumnDef<RackRow>[] = [
-  { accessorKey: "name", header: "Rack", size: COLUMN_SIZE },
+  { accessorKey: "name", header: "Rack", ...COLUMN_DEFAULTS },
   {
     accessorKey: "efficiencyWPerThs",
     header: "Efficiency",
-    size: COLUMN_SIZE,
+    ...COLUMN_DEFAULTS,
     cell: ({ row }) => formatEfficiency(row.original.efficiencyWPerThs),
   },
   {
     accessorKey: "powerKw",
     header: "Consumption",
-    size: COLUMN_SIZE,
+    ...COLUMN_DEFAULTS,
     cell: ({ row }) => formatPowerKw(row.original.powerKw),
   },
   {
     accessorKey: "hashratePhs",
     header: "Hash rate",
-    size: COLUMN_SIZE,
+    ...COLUMN_DEFAULTS,
     cell: ({ row }) => formatHashratePhs(row.original.hashratePhs),
   },
 ];

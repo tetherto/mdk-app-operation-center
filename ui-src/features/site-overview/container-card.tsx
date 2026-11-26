@@ -21,15 +21,20 @@ const Metric = ({ label, value }: MetricProps) => (
   </div>
 );
 
+const CONTROLS_CLASS = "op-centre-lite-container-card__controls";
+
 /**
  * Clicks the card handles itself: on the card, not on a link (it navigates on
- * its own) or a control. React passes clicks in portals (the confirmation
- * dialog, a select's list) up through the card too, so those are left out.
+ * its own) or the power controls. React passes clicks in portals (the
+ * confirmation dialog, a select's list) up through the card too, so those are
+ * left out. The browser hands a click on a disabled control to its nearest
+ * enabled ancestor, so the controls are left out by their area, not only by
+ * their buttons: a click on a disabled "Set Power Mode" must not open the page.
  */
 const isCardSurfaceClick = (event: MouseEvent<HTMLElement>): boolean =>
   event.target instanceof Element &&
   event.currentTarget.contains(event.target) &&
-  event.target.closest("a, button, [role='combobox']") === null;
+  event.target.closest(`a, button, [role='combobox'], .${CONTROLS_CLASS}`) === null;
 
 type ContainerCardProps = { card: ContainerCardData };
 
@@ -66,7 +71,7 @@ export const ContainerCard = ({ card }: ContainerCardProps) => {
       </Card.Header>
       <Card.Body className="op-centre-lite-container-card__body">
         <PowerCommandControls
-          className="op-centre-lite-container-card__controls"
+          className={CONTROLS_CLASS}
           target={{ containerId: card.id }}
           targetName={card.name}
           supportedPowerModes={card.power.supportedModes}

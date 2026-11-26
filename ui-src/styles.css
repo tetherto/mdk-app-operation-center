@@ -7,6 +7,13 @@
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+  /*
+   * Narrow layouts follow the page's own width, not the window's: the dashboard sidebar takes its share either way.
+   * `inline-size` also brings layout containment, so the page is the containing block for any `position: fixed`
+   * descendant. The devkit's dropdowns and dialogs portal out to the body, so they still anchor to the viewport;
+   * an overlay that stays inside the page would anchor to the page box instead.
+   */
+  container: op-centre-lite-page / inline-size;
 }
 
 @media (max-width: 768px) {
@@ -19,27 +26,98 @@
 /*
  * The stats strip is the page's header row: flush under the dashboard header
  * and edge to edge, so it cancels the shell's main padding and keeps it
- * inside, lining the boxes up with the page title.
+ * inside on the left, lining the boxes up with the page title. The boxes never
+ * reach the right edge in one row, so it keeps no padding there: that leaves
+ * them room to stay on one row down to the md breakpoint (below).
  */
 .op-centre-lite-page > .mdk-header-stats-bar {
   max-width: none;
   margin: calc(-1 * var(--op-centre-lite-shell-pad-y)) calc(-1 * var(--op-centre-lite-shell-pad-x))
     0;
-  padding: 0 var(--op-centre-lite-shell-pad-x);
+  padding: 0 0 0 var(--op-centre-lite-shell-pad-x);
   border-bottom: 1px solid var(--mdk-color-white-12);
+}
+
+/*
+ * No pool-side readings (site-stats-strip.tsx). The miners box keeps its second
+ * row's online / total and drops the pool count after them; the hashrate box's
+ * second row is the pool reading alone.
+ * These selectors follow the child order of HeaderMinersBox / HeaderHashrateBox
+ * in @tetherto/mdk-react-devkit 0.13.0; recheck them on a devkit bump. The devkit
+ * should make the pool row optional (MDK friction ticket "Header boxes always
+ * render the Pool row"), after which this block goes.
+ */
+.op-centre-lite-miners-box--no-pool .mdk-header-stat-box__row:nth-child(2) > :nth-child(n + 3),
+.op-centre-lite-hashrate-box--no-pool .mdk-header-stat-box__row:nth-child(2) {
+  display: none;
 }
 
 .op-centre-lite-page__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+/* Page titles as the design sets them: 24px regular, a dim 12px line under. */
+.op-centre-lite-page__header .mdk-typography--heading1 {
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #fff;
+}
+
+.op-centre-lite-page__subtitle {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--op-centre-lite-dim);
+}
+
+/* The hosted demo's read-only notice and its "Download the App" button (hosted-demo-banner.tsx). */
+.op-centre-lite-demo-banner {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--op-centre-lite-orange), 0.4);
+  background: rgba(var(--op-centre-lite-orange), 0.06);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--op-centre-lite-orange));
+}
+
+.op-centre-lite-download-app {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 24px;
+  border: 1px solid var(--op-centre-lite-control-line);
+  background: var(--op-centre-lite-control-bg);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.op-centre-lite-download-app:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.op-centre-lite-download-app svg {
+  width: 16px;
+  height: 16px;
 }
 
 .op-centre-lite-page__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 24px;
+}
+
+.op-centre-lite-page__actions:empty {
+  display: none;
 }
 
 .op-centre-lite-home-panel {
@@ -56,46 +134,189 @@
 
 .op-centre-lite-site-overview {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+  /* Never wider than the page: on a phone a card takes the whole row. */
+  grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
   gap: 16px;
 }
 
-.op-centre-lite-container-card__header {
+/*
+ * A Site Overview card as the design draws it: a plain panel, its sections
+ * ruled off (name and power, controls, efficiency and hash rate, racks, status).
+ */
+.op-centre-lite-container-card.mdk-card {
+  padding: 0;
+  border: 1px solid var(--op-centre-lite-line);
+  border-radius: 0;
+  background: var(--op-centre-lite-panel-bg);
+  cursor: pointer;
+  /* Square, as the design draws it. The devkit card cuts its top-left corner, and the line it draws across that cut is hidden below, which left the corner with no border. */
+  clip-path: none;
+}
+
+.op-centre-lite-container-card.mdk-card::before {
+  display: none;
+}
+
+.op-centre-lite-container-card.mdk-card:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.op-centre-lite-container-card__header.mdk-card__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  margin: 0;
+  padding: 13px 15px 11px;
+  border-bottom: 1px solid var(--op-centre-lite-line);
 }
 
-.op-centre-lite-container-card__body {
+.op-centre-lite-container-card__header .mdk-typography {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.op-centre-lite-container-card__header .mdk-typography--secondary {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-container-card__body.mdk-card__body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
+  padding: 0;
+}
+
+.op-centre-lite-container-card__body > * {
+  padding: 16px 15px;
+}
+
+.op-centre-lite-container-card__body > * + * {
+  border-top: 1px solid var(--op-centre-lite-line);
 }
 
 .op-centre-lite-container-card__controls,
 .op-centre-lite-container-card__metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 11px;
 }
 
 .op-centre-lite-container-card__metric {
-  display: flex;
+  display: grid;
+  grid-template-columns: 110px 1fr;
   align-items: baseline;
-  gap: 8px;
 }
 
-/* Figma's rack table is denser than the DataTable default (16px cells, 50px header). */
+.op-centre-lite-container-card__metric .mdk-typography {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: #fff;
+}
+
+.op-centre-lite-container-card__metric .mdk-typography--secondary {
+  color: var(--op-centre-lite-dim);
+}
+
+/* The rack table: a bordered box, a dark 11px bold header and 32px rows. */
+.op-centre-lite-container-card .mdk-table__content-section {
+  border: 1px solid var(--op-centre-lite-line);
+}
+
 .op-centre-lite-rack-table th,
 .op-centre-lite-rack-table td {
   height: auto;
-  padding: 8px 12px;
+  padding: 7px 12px;
   white-space: nowrap;
 }
 
-.op-centre-lite-container-card {
-  cursor: pointer;
+.op-centre-lite-rack-table thead tr th {
+  background: var(--op-centre-lite-control-bg);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-rack-table tbody td {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.op-centre-lite-rack-table tbody td:first-child {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.op-centre-lite-rack-table .mdk-table-header-sort {
+  display: none;
+}
+
+/* Status tiles in the design's colours (Site Overview frame): label over count, 38px tall. */
+.op-centre-lite-container-card .mdk-miners-activity-chart__root--tiles {
+  gap: 4px;
+}
+
+/* The devkit sets each tile's colours inline, so these need !important to apply. */
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile {
+  --op-centre-lite-tile: 107, 114, 128;
+  --op-centre-lite-tile-alpha: 0.2;
+  height: 38px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(var(--op-centre-lite-tile), var(--op-centre-lite-tile-alpha)) !important;
+  color: rgb(var(--op-centre-lite-tile)) !important;
+}
+
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile:nth-child(2) {
+  --op-centre-lite-tile: 239, 68, 68;
+}
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile:nth-child(3) {
+  --op-centre-lite-tile: 59, 130, 246;
+}
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile:nth-child(4) {
+  --op-centre-lite-tile: 110, 231, 183;
+}
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile:nth-child(6) {
+  --op-centre-lite-tile: 58, 255, 242;
+}
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile:nth-child(7) {
+  --op-centre-lite-tile: 245, 158, 11;
+}
+
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile:nth-child(5) {
+  --op-centre-lite-tile: 114, 245, 158;
+  --op-centre-lite-tile-alpha: 0.1;
+}
+
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile:nth-child(6) {
+  --op-centre-lite-tile-alpha: 0.1;
+}
+
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile-label,
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile-value {
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 13px;
+  color: inherit !important;
+}
+
+.op-centre-lite-container-card .mdk-miners-activity-chart__tile-label {
+  text-transform: capitalize;
+}
+
+/* The whole card is the click target: rack rows get no hover state or pointer of their own. */
+.op-centre-lite-rack-table .mdk-table__body-row,
+.op-centre-lite-rack-table .mdk-table__body-row:hover,
+.op-centre-lite-rack-table .mdk-table__body-row:hover > td {
+  background: transparent;
+  cursor: inherit;
 }
 
 .op-centre-lite-container-card__title {
@@ -130,12 +351,50 @@
   min-width: 180px;
 }
 
-/* Figma's Explorer rows are denser than the DataTable default. */
+/* Explorer rows as the design sets them: a 42px bold header, 48px rows in 14px text. */
 .op-centre-lite-explorer__table th,
 .op-centre-lite-explorer__table td {
   height: auto;
-  padding: 12px 16px;
+  padding: 13px 16px;
   white-space: nowrap;
+}
+
+.op-centre-lite-explorer__table thead tr th {
+  background: var(--op-centre-lite-panel-bg);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-explorer__table tbody td {
+  border-bottom: 1px solid var(--op-centre-lite-line);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.op-centre-lite-explorer__table tbody td:first-child {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.op-centre-lite-explorer__toolbar .mdk-button--variant-secondary {
+  height: 40px;
+  padding: 0 24px;
+  border: 1px solid var(--op-centre-lite-control-line);
+  border-radius: 0;
+  background: var(--op-centre-lite-control-bg);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.op-centre-lite-explorer__container.mdk-select__trigger {
+  min-width: 199px;
+  height: 40px;
+  border: 1px solid var(--op-centre-lite-control-line);
+  border-radius: 0;
+  background: var(--op-centre-lite-control-bg);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .op-centre-lite-explorer__table td:last-child {
@@ -155,176 +414,6 @@
   margin-top: 16px;
 }
 
-.op-centre-lite-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.op-centre-lite-layout__toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.op-centre-lite-layout__body {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.op-centre-lite-socket-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-}
-
-.op-centre-lite-socket-legend__states {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.op-centre-lite-zoom {
-  display: flex;
-  gap: 8px;
-}
-
-/* --op-centre-lite-socket-size and --op-centre-lite-rack-columns come from socket-grid.tsx. */
-.op-centre-lite-socket-grid {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.op-centre-lite-socket-grid__rack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--mdk-color-white-12);
-}
-
-.op-centre-lite-socket-grid__sockets {
-  display: grid;
-  grid-template-columns: repeat(
-    var(--op-centre-lite-rack-columns),
-    var(--op-centre-lite-socket-size)
-  );
-  gap: 4px;
-}
-
-/* Status tints: the colours of the devkit's Indicator, as on the Site Overview tiles. */
-.op-centre-lite-socket {
-  --op-centre-lite-socket-rgb: var(--mdk-color-dark-grey);
-
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: var(--op-centre-lite-socket-size);
-  height: var(--op-centre-lite-socket-size);
-  padding: 4px;
-  border: 1px solid transparent;
-  background-color: rgba(var(--op-centre-lite-socket-rgb), 0.1);
-  color: rgb(var(--op-centre-lite-socket-rgb));
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.op-centre-lite-socket[data-state="error"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-error);
-}
-
-.op-centre-lite-socket[data-state="sleep"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-sleep-blue);
-}
-
-.op-centre-lite-socket[data-state="low"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-low-yellow);
-}
-
-.op-centre-lite-socket[data-state="normal"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-success);
-}
-
-.op-centre-lite-socket[data-state="high"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-purple-high);
-}
-
-.op-centre-lite-socket[data-state="empty"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-grey-idle);
-
-  border: 1px dashed rgba(var(--op-centre-lite-socket-rgb), 0.4);
-  background-color: transparent;
-  cursor: default;
-}
-
-.op-centre-lite-socket[aria-pressed="true"] {
-  border-color: var(--mdk-color-primary);
-}
-
-.op-centre-lite-socket:focus-visible {
-  outline: 1px solid var(--mdk-color-primary);
-  outline-offset: 1px;
-}
-
-.op-centre-lite-socket__slot {
-  font-size: 10px;
-  line-height: 1;
-  opacity: 0.8;
-}
-
-.op-centre-lite-socket__value {
-  align-self: flex-end;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.op-centre-lite-miner-panel {
-  position: sticky;
-  top: 16px;
-  flex-shrink: 0;
-  width: 280px;
-}
-
-.op-centre-lite-miner-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.op-centre-lite-miner-panel__details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-}
-
-.op-centre-lite-miner-panel__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.op-centre-lite-miner-panel__row dd {
-  margin: 0;
-}
-
-/* The "Download the App" link wears the devkit's button classes; drop the link underline. */
-.op-centre-lite-demo-banner a {
-  text-decoration: none;
-}
-
 /* Read by screen readers, not shown. */
 .op-centre-lite-visually-hidden {
   position: absolute;
@@ -335,248 +424,1114 @@
   white-space: nowrap;
 }
 
+/* Site Efficiency, as the design lays it out (Figma "Operation Center Lite - Site Efficiency"). */
 .op-centre-lite-site-efficiency {
+  /* The meter colours, one per meter, cycling (SERIES_COLOR_COUNT in site-efficiency-shape.ts). */
+  --op-centre-lite-series-0: var(--mdk-color-primary-rgb);
+  --op-centre-lite-series-1: var(--mdk-color-sleep-blue);
+  --op-centre-lite-series-2: var(--mdk-color-success);
+  /* The design's fourth meter colour (#3afff2, PM-04 in the Site Efficiency frame); the devkit has no cyan token. */
+  --op-centre-lite-series-3: 58, 255, 242;
+  --op-centre-lite-series-4: var(--mdk-color-purple-high);
+  --op-centre-lite-series-5: var(--mdk-color-low-yellow);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
-.op-centre-lite-site-efficiency__kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-}
-
-.op-centre-lite-kpi__body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
+.op-centre-lite-site-efficiency__kpis,
 .op-centre-lite-site-efficiency__meters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+/* The three KPIs share one row down to tablet width, instead of leaving the third alone on a second row. */
+.op-centre-lite-site-efficiency__kpis {
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+}
+
+.op-centre-lite-site-efficiency__section {
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+}
+
+.op-centre-lite-site-efficiency__heading {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(var(--mdk-color-white-rgb), 0.9);
+}
+
+/* The devkit card's notched corner and hover outline are for clickable cards; these are plain panels. */
+.op-centre-lite-kpi-tile,
+.op-centre-lite-meter-card {
+  clip-path: none;
+}
+
+.op-centre-lite-kpi-tile::before,
+.op-centre-lite-meter-card::before {
+  display: none;
+}
+
+.op-centre-lite-kpi-tile {
+  border: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.op-centre-lite-kpi-tile:hover {
+  border-color: transparent;
+}
+
+.op-centre-lite-kpi-tile .mdk-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 21px;
+}
+
+.op-centre-lite-kpi-tile__label {
+  font-size: 12px;
+  color: rgba(var(--mdk-color-white-rgb), 0.5);
+}
+
+.op-centre-lite-value-with-unit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.op-centre-lite-value-with-unit__value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.op-centre-lite-value-with-unit__unit {
+  font-size: 12px;
+  color: rgba(var(--mdk-color-white-rgb), 0.4);
+}
+
+.op-centre-lite-kpi-tile__value .op-centre-lite-value-with-unit__value {
+  color: var(--mdk-color-primary);
+}
+
+.op-centre-lite-meter-card {
+  border-color: rgba(var(--mdk-color-white-rgb), 0.1);
+  background-color: var(--mdk-color-dark-black);
+}
+
+.op-centre-lite-meter-card:hover {
+  border-color: rgba(var(--mdk-color-white-rgb), 0.1);
+}
+
+.op-centre-lite-meter-card .mdk-card__header,
+.op-centre-lite-meter-card .mdk-card__body {
+  border-color: rgba(var(--mdk-color-white-rgb), 0.1);
 }
 
 .op-centre-lite-meter-card__header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 15px 12px;
+}
+
+/* The container under the meter's name and the "Efficiency" label: the design's dimmed caption. */
+.op-centre-lite-meter-card .mdk-typography--secondary {
+  color: rgba(var(--mdk-color-white-rgb), 0.5);
+}
+
+.op-centre-lite-meter-card__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.op-centre-lite-meter-card__efficiency {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 13px 15px 14px;
+}
+
+.op-centre-lite-meter-card__efficiency-value .op-centre-lite-value-with-unit__value {
+  color: rgba(var(--mdk-color-white-rgb), 0.92);
 }
 
 .op-centre-lite-meter-card__metrics {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 12px 15px 15px;
 }
 
 .op-centre-lite-meter-card__metric {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
-.op-centre-lite-breakdown__body {
+.op-centre-lite-meter-card__metric-label {
+  color: rgba(var(--mdk-color-white-rgb), 0.5);
+}
+
+.op-centre-lite-meter-card__metric-value {
+  color: rgba(var(--mdk-color-white-rgb), 0.9);
+}
+
+/* A meter's colour: the card's key, the bar segment and the table's swatch. */
+.op-centre-lite-series-swatch {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  background-color: rgb(var(--op-centre-lite-series-rgb));
+}
+
+.op-centre-lite-series-swatch,
+.op-centre-lite-breakdown__segment {
+  --op-centre-lite-series-rgb: var(--op-centre-lite-series-0);
+}
+
+[data-series="1"].op-centre-lite-series-swatch,
+[data-series="1"].op-centre-lite-breakdown__segment {
+  --op-centre-lite-series-rgb: var(--op-centre-lite-series-1);
+}
+
+[data-series="2"].op-centre-lite-series-swatch,
+[data-series="2"].op-centre-lite-breakdown__segment {
+  --op-centre-lite-series-rgb: var(--op-centre-lite-series-2);
+}
+
+[data-series="3"].op-centre-lite-series-swatch,
+[data-series="3"].op-centre-lite-breakdown__segment {
+  --op-centre-lite-series-rgb: var(--op-centre-lite-series-3);
+}
+
+[data-series="4"].op-centre-lite-series-swatch,
+[data-series="4"].op-centre-lite-breakdown__segment {
+  --op-centre-lite-series-rgb: var(--op-centre-lite-series-4);
+}
+
+[data-series="5"].op-centre-lite-series-swatch,
+[data-series="5"].op-centre-lite-breakdown__segment {
+  --op-centre-lite-series-rgb: var(--op-centre-lite-series-5);
+}
+
+[data-series="rest"].op-centre-lite-series-swatch,
+[data-series="rest"].op-centre-lite-breakdown__segment {
+  --op-centre-lite-series-rgb: var(--mdk-color-grey-idle);
+}
+
+/* The site meter's own swatch: neutral, since it is the whole, not a part. */
+[data-series="total"].op-centre-lite-series-swatch {
+  background-color: rgba(var(--mdk-color-white-rgb), 0.35);
+}
+
+.op-centre-lite-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .op-centre-lite-breakdown__bar {
   display: flex;
-  height: 16px;
-  gap: 2px;
+  height: 32px;
 }
 
+/* Each meter's share, tinted in its colour with a solid top edge and its name and share inside. */
 .op-centre-lite-breakdown__segment {
+  display: flex;
   flex-basis: 0;
+  align-items: center;
+  justify-content: center;
   min-width: 2px;
+  overflow: hidden;
+  border-top: 1px solid rgb(var(--op-centre-lite-series-rgb));
+  background-color: rgba(var(--op-centre-lite-series-rgb), 0.25);
 }
 
-.op-centre-lite-breakdown__name {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.op-centre-lite-breakdown__swatch {
-  width: 10px;
-  height: 10px;
-}
-
-/* One colour per meter, cycling (SERIES_COLOR_COUNT in site-efficiency-shape.ts). */
-.op-centre-lite-breakdown__segment[data-series="0"],
-.op-centre-lite-breakdown__swatch[data-series="0"] {
-  background-color: var(--mdk-color-primary);
-}
-
-.op-centre-lite-breakdown__segment[data-series="1"],
-.op-centre-lite-breakdown__swatch[data-series="1"] {
-  background-color: rgb(var(--mdk-color-sleep-blue));
-}
-
-.op-centre-lite-breakdown__segment[data-series="2"],
-.op-centre-lite-breakdown__swatch[data-series="2"] {
-  background-color: rgb(var(--mdk-color-purple-high));
-}
-
-.op-centre-lite-breakdown__segment[data-series="3"],
-.op-centre-lite-breakdown__swatch[data-series="3"] {
-  background-color: rgb(var(--mdk-color-success));
-}
-
-.op-centre-lite-breakdown__segment[data-series="4"],
-.op-centre-lite-breakdown__swatch[data-series="4"] {
-  background-color: rgb(var(--mdk-color-low-yellow));
-}
-
-.op-centre-lite-breakdown__segment[data-series="5"],
-.op-centre-lite-breakdown__swatch[data-series="5"] {
-  background-color: rgb(var(--mdk-color-error));
-}
-
-.op-centre-lite-breakdown__segment[data-series="rest"],
-.op-centre-lite-breakdown__swatch[data-series="rest"] {
-  background-color: rgba(var(--mdk-color-grey-idle), 0.6);
-}
-
-.op-centre-lite-breakdown__table th,
-.op-centre-lite-breakdown__table td {
-  padding: 12px 16px;
-}
-
-/* Heatmap colours, coolest to hottest (HEAT_STEPS in heatmap-shape.ts); they win over the status tint. */
-.op-centre-lite-socket[data-heat="0"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-sleep-blue);
-}
-
-.op-centre-lite-socket[data-heat="1"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-success);
-}
-
-.op-centre-lite-socket[data-heat="2"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-low-yellow);
-}
-
-.op-centre-lite-socket[data-heat="3"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-orange-warning);
-}
-
-.op-centre-lite-socket[data-heat="4"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-error);
-}
-
-.op-centre-lite-socket[data-heat="none"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-dark-grey);
-}
-
-.op-centre-lite-socket[data-heat] {
-  background-color: rgba(var(--op-centre-lite-socket-rgb), 0.25);
-}
-
-.op-centre-lite-heatmap__controls {
+.op-centre-lite-breakdown__segment-label {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-}
-
-.op-centre-lite-heatmap__metric {
-  min-width: 200px;
-}
-
-.op-centre-lite-heat-legend {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.op-centre-lite-heat-legend__steps {
-  display: flex;
-  gap: 2px;
-}
-
-.op-centre-lite-heat-legend__step {
-  --op-centre-lite-socket-rgb: var(--mdk-color-dark-grey);
-
-  width: 24px;
-  height: 12px;
-  background-color: rgb(var(--op-centre-lite-socket-rgb));
-}
-
-.op-centre-lite-heat-legend__step[data-heat="0"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-sleep-blue);
-}
-
-.op-centre-lite-heat-legend__step[data-heat="1"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-success);
-}
-
-.op-centre-lite-heat-legend__step[data-heat="2"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-low-yellow);
-}
-
-.op-centre-lite-heat-legend__step[data-heat="3"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-orange-warning);
-}
-
-.op-centre-lite-heat-legend__step[data-heat="4"] {
-  --op-centre-lite-socket-rgb: var(--mdk-color-error);
-}
-
-.op-centre-lite-miner-panel__body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.op-centre-lite-miner-panel__actions,
-.op-centre-lite-miner-panel__controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.op-centre-lite-power-panel {
-  position: sticky;
-  top: 16px;
-  flex-shrink: 0;
-  width: 300px;
-}
-
-.op-centre-lite-power-panel__body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.op-centre-lite-power-panel__selection {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 1ch;
+  padding-inline: 4px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--op-centre-lite-series-rgb));
   white-space: nowrap;
 }
 
-.op-centre-lite-power-panel__value {
+.op-centre-lite-breakdown .mdk-table {
+  margin: 0;
+}
+
+.op-centre-lite-breakdown .mdk-table__content-section {
+  border-color: rgba(var(--mdk-color-white-rgb), 0.1);
+}
+
+.op-centre-lite-breakdown__table thead tr th {
+  height: 42px;
+  padding: 0 16px;
+  font-weight: 700;
+  color: rgba(var(--mdk-color-white-rgb), 0.5);
+  background-color: var(--mdk-color-dark-black);
+}
+
+/* The table does not sort, so the header keeps no room for a sort icon and lines up with its column. */
+.op-centre-lite-breakdown__table .mdk-table-header-sort {
+  display: none;
+}
+
+.op-centre-lite-breakdown__table tbody td {
+  height: 48px;
+  padding: 0 16px;
+  font-size: 14px;
+  color: rgba(var(--mdk-color-white-rgb), 0.7);
+  border-color: rgba(var(--mdk-color-white-rgb), 0.1);
+}
+
+.op-centre-lite-breakdown__source {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(var(--mdk-color-white-rgb), 0.9);
+}
+
+.op-centre-lite-breakdown__source[data-total="true"] {
+  font-weight: 500;
+}
+
+/*
+ * Each detail legend entry is a <button>, and buttons take the browser's UI
+ * font (Arial) instead of inheriting, so the legend was the one non-monospace
+ * text in the chart cards. Inherit the page font like the title and footer.
+ */
+.op-centre-lite-page .mdk-detail-legend__item {
+  font-family: inherit;
+}
+
+/*
+ * Chart cards, as the design draws them (Dashboard and the container's Charts
+ * tab): an 18px title, each series' current value large under its key and
+ * label, the first series' in orange, and the footer's labels dimmed.
+ */
+.op-centre-lite-history .mdk-chart-container__title {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 22px;
+  color: #fff;
+}
+
+.op-centre-lite-history .mdk-detail-legend {
+  gap: 16px 96px;
+}
+
+.op-centre-lite-history .mdk-detail-legend__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+
+.op-centre-lite-history .mdk-detail-legend__content {
+  display: contents;
+}
+
+.op-centre-lite-history .mdk-detail-legend__icon {
+  width: auto;
+  align-items: center;
+}
+
+.op-centre-lite-history .mdk-detail-legend__value-row {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.op-centre-lite-history .mdk-detail-legend__value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.op-centre-lite-history .mdk-detail-legend__item:first-child .mdk-detail-legend__value {
+  color: var(--mdk-color-primary);
+}
+
+.op-centre-lite-history .mdk-detail-legend__unit {
+  flex: none;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--mdk-color-white-5);
+}
+
+.op-centre-lite-legend-key {
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+}
+
+.op-centre-lite-legend-key[data-line="dashed"] {
+  width: 12px;
+  height: 0;
+  border-top: 2px dashed currentColor;
+  background: none;
+}
+
+.op-centre-lite-history .mdk-min-max-avg__label {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--mdk-color-white-5);
+}
+
+.op-centre-lite-history .mdk-min-max-avg__value {
+  font-size: 12px;
+  color: #fff;
+}
+
+.op-centre-lite-history .mdk-min-max-avg {
+  gap: 32px;
+}
+
+/* A history chart loading a new interval: the previous chart dims under a loader (history-chart-card.tsx). */
+.op-centre-lite-history {
+  position: relative;
+  min-width: 0;
+}
+
+.op-centre-lite-history[data-stale="true"] .mdk-line-chart-card {
+  opacity: 0.4;
+  transition: opacity 120ms ease-out;
+}
+
+/*
+ * The window toggle as the design draws it: one outlined strip on the dark
+ * background, split by dividers, rather than a box around each option. The
+ * picked window is white, the others half white; 24px tall overall.
+ */
+.op-centre-lite-history .mdk-radio-group--no-gap {
+  border: 1.5px solid var(--mdk-color-white-2);
+  background-color: var(--mdk-color-dark-black);
+}
+
+.op-centre-lite-history .mdk-radio-group--no-gap .mdk-radio-card {
+  box-sizing: border-box;
+  height: 21px;
+  border: 0;
+  padding-inline: 5px;
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--mdk-color-white-5);
+}
+
+.op-centre-lite-history .mdk-radio-group--no-gap .mdk-radio-card + .mdk-radio-card {
+  border-left: 1.5px solid var(--mdk-color-white-2);
+}
+
+.op-centre-lite-history .mdk-radio-group--no-gap .mdk-radio-card[data-state="checked"] {
+  color: var(--mdk-color-white);
+}
+
+.op-centre-lite-history__loader {
+  position: absolute;
+  inset: 0;
+  /* .mdk-loader sets height: 200px, which wins over inset's bottom and pins the dots to the top of a taller card. */
+  height: 100%;
+  z-index: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/*
+ * The container detail page, as the design lays it out (Figma "Operation Center
+ * Lite - Container 1 - Layout / Power Adjustment / Charts / Heatmap").
+ */
+/* The design's colours and lines, shared by every page. */
+.op-centre-lite-page {
+  --op-centre-lite-orange: 247, 147, 26;
+  --op-centre-lite-panel-bg: #0f0f0f;
+  --op-centre-lite-control-bg: #17130f;
+  --op-centre-lite-line: rgba(255, 255, 255, 0.1);
+  --op-centre-lite-control-line: rgba(255, 255, 255, 0.2);
+  --op-centre-lite-dim: rgba(255, 255, 255, 0.5);
+  --op-centre-lite-socket-on: #2c5b3c;
+  --op-centre-lite-socket-off: rgba(255, 255, 255, 0.13);
+  /* Status colours, as the design's legend keys them. */
+  --op-centre-lite-state-offline: 107, 114, 128;
+  --op-centre-lite-state-error: 239, 68, 68;
+  --op-centre-lite-state-sleep: 59, 130, 246;
+  --op-centre-lite-state-normal: 114, 245, 158;
+  --op-centre-lite-state-low: 246, 238, 92;
+  --op-centre-lite-state-high: 139, 92, 246;
+  --op-centre-lite-state-mining-error: var(--op-centre-lite-orange);
+}
+
+.op-centre-lite-detail .op-centre-lite-page__header {
+  align-items: flex-start;
+}
+
+.op-centre-lite-detail__back {
+  display: inline-block;
+  margin-top: 17px;
+  font-size: 14px;
+  color: rgb(var(--op-centre-lite-orange));
+  text-decoration: none;
+}
+
+.op-centre-lite-detail__back:hover {
+  text-decoration: underline;
+}
+
+.op-centre-lite-detail__meta {
+  font-size: 12px;
+  color: var(--op-centre-lite-dim);
+}
+
+/* Tabs (Explorer, container page): an underlined strip, the active tab orange with a 2px rule. */
+.op-centre-lite-tabs.mdk_tabs__list {
+  display: flex;
+  gap: 16px;
+  height: 43px;
+  padding: 0;
+  border-bottom: 1px solid var(--op-centre-lite-control-line);
+  background: transparent;
+}
+
+.op-centre-lite-tabs .mdk_tabs__trigger {
+  flex: none;
+  margin: 0;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-size: 16px;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-tabs .mdk_tabs__trigger[data-state="active"] {
+  border-bottom-color: rgb(var(--op-centre-lite-orange));
+  color: rgb(var(--op-centre-lite-orange));
+}
+
+/* Workbench and side panel side by side; the panel drops under the grid on a narrow screen. */
+.op-centre-lite-detail-body {
+  display: grid;
+  grid-template-columns: minmax(0, 794px) 360px;
+  gap: 24px;
+  align-items: start;
+  margin-top: 33px;
+}
+
+/* The read-only notice sits between the tabs and the tab's content. */
+.op-centre-lite-detail .op-centre-lite-demo-banner {
+  margin-top: 25px;
+}
+
+.op-centre-lite-detail .op-centre-lite-demo-banner + .mdk_tabs__content .op-centre-lite-detail-body,
+.op-centre-lite-detail .op-centre-lite-demo-banner + .mdk_tabs__content .op-centre-lite-charts {
+  margin-top: 24px;
+}
+
+@media (max-width: 1280px) {
+  .op-centre-lite-detail-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.op-centre-lite-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 17px 25px 25px;
+  border: 1px solid var(--op-centre-lite-line);
+  background: var(--op-centre-lite-panel-bg);
+  min-width: 0;
+}
+
+.op-centre-lite-workbench__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+}
+
+.op-centre-lite-workbench__efficiency {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.op-centre-lite-workbench__label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.op-centre-lite-workbench__value {
+  font-size: 18px;
+  line-height: 24px;
+  color: #fff;
+}
+
+.op-centre-lite-workbench__actions,
+.op-centre-lite-workbench__tools {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
-.op-centre-lite-power-panel__input {
-  width: 96px;
+/* The design's outlined control: Zoom In, Print, Select All, Download Logs. */
+.op-centre-lite-detail .mdk-button.op-centre-lite-tool {
+  height: 40px;
+  padding: 0 21px;
+  border: 1px solid var(--op-centre-lite-control-line);
+  border-radius: 0;
+  background: var(--op-centre-lite-control-bg);
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-/* The devkit Slider is Radix unstyled (its USAGE classes ship no CSS). */
+.op-centre-lite-detail .mdk-button.op-centre-lite-tool:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.op-centre-lite-detail .mdk-button.op-centre-lite-tool:disabled {
+  opacity: 0.5;
+}
+
+.op-centre-lite-detail .mdk-button.op-centre-lite-tool[aria-pressed="true"] {
+  border-color: rgb(var(--op-centre-lite-orange));
+  color: rgb(var(--op-centre-lite-orange));
+}
+
+/* The grid scrolls inside its frame, as the design's 600px window onto the racks. */
+.op-centre-lite-workbench__grid {
+  height: 600px;
+  overflow: auto;
+  border: 1px solid var(--op-centre-lite-line);
+  background: var(--op-centre-lite-control-bg);
+}
+
+.op-centre-lite-socket-grid {
+  display: flex;
+  gap: 50px;
+  width: max-content;
+  min-width: 100%;
+  padding: 40px 17px 17px;
+}
+
+.op-centre-lite-socket-grid[data-ordered="true"] {
+  display: block;
+  width: auto;
+}
+
+.op-centre-lite-socket-grid[data-ordered="true"] .op-centre-lite-socket-grid__sockets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 106px);
+}
+
+.op-centre-lite-socket-grid__rack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 140px;
+  padding: 7px 16px 16px;
+  border: 1px solid var(--op-centre-lite-line);
+  background: var(--op-centre-lite-panel-bg);
+}
+
+.op-centre-lite-socket-grid__rack-name {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.op-centre-lite-socket-grid__sockets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* A socket: tinted in its miner's status colour, its position on a strip that shows the socket's power. */
+.op-centre-lite-socket {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-offline);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 106px;
+  height: 58px;
+  padding: 7px 0 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: rgba(var(--op-centre-lite-socket-rgb), 0.1);
+  color: rgb(var(--op-centre-lite-socket-rgb));
+  font: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.op-centre-lite-socket[data-state="error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-error);
+}
+
+.op-centre-lite-socket[data-state="sleep"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-sleep);
+}
+
+.op-centre-lite-socket[data-state="normal"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-normal);
+}
+
+.op-centre-lite-socket[data-state="low"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-low);
+}
+
+.op-centre-lite-socket[data-state="high"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-high);
+}
+
+.op-centre-lite-socket[data-state="mining-error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-mining-error);
+}
+
+.op-centre-lite-socket[data-state="empty"] {
+  border-color: var(--op-centre-lite-line);
+  background: var(--op-centre-lite-panel-bg);
+  cursor: default;
+}
+
+.op-centre-lite-socket[aria-pressed="true"] {
+  border-color: rgb(var(--op-centre-lite-socket-rgb));
+}
+
+.op-centre-lite-socket:focus-visible {
+  outline: 2px solid rgb(var(--op-centre-lite-orange));
+  outline-offset: 1px;
+}
+
+.op-centre-lite-socket__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 13px;
+}
+
+/* One line (power %, a heatmap value) sits where the design centres it. */
+.op-centre-lite-socket__lines:has(> :only-child) {
+  padding-top: 7px;
+}
+
+.op-centre-lite-socket__position {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  right: 6px;
+  height: 14px;
+  line-height: 14px;
+  background: var(--op-centre-lite-socket-on);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.op-centre-lite-socket[data-power="off"] .op-centre-lite-socket__position {
+  background: var(--op-centre-lite-socket-off);
+}
+
+/* No PDU reading: an outline, not a fill, so it reads as neither on nor off. */
+.op-centre-lite-socket[data-power="unknown"] .op-centre-lite-socket__position {
+  background: transparent;
+  outline: 1px dashed var(--op-centre-lite-control-line);
+  outline-offset: -1px;
+}
+
+/* An empty socket keeps its strip only when the PDU reports it on or off. */
+.op-centre-lite-socket[data-state="empty"] .op-centre-lite-socket__position {
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-socket[data-state="empty"][data-power="unknown"] .op-centre-lite-socket__position {
+  outline: none;
+}
+
+/* Heatmap colours (heatmap-shape.ts): the tile takes its place on the scale in full, over the status tint. */
+/* data-heat is the ink its value reads in; "none" (no reading) takes the fallback grey. */
+.op-centre-lite-socket[data-heat] {
+  background: var(--op-centre-lite-heat, #4a4644);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.op-centre-lite-socket[data-heat="dark"] {
+  color: #11100f;
+}
+
+.op-centre-lite-socket[data-heat="none"] {
+  color: var(--op-centre-lite-dim);
+}
+
+/* The heatmap has no power keys, so a tile's position strip is the design's plain dark one. */
+.op-centre-lite-socket[data-heat] .op-centre-lite-socket__position {
+  background: rgba(14, 14, 14, 0.45);
+}
+
+/* The key under the grid. */
+.op-centre-lite-workbench__legend {
+  padding: 16px;
+  border: 1px solid var(--op-centre-lite-line);
+  background: var(--op-centre-lite-control-bg);
+}
+
+.op-centre-lite-socket-legend {
+  display: grid;
+  /* Five keys a row as the design sets them; the last column fits "Mining with Error". */
+  grid-template-columns: repeat(4, minmax(0, 1fr)) max-content;
+  gap: 16px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.op-centre-lite-socket-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 12px;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-socket-legend__swatch {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-offline);
+  position: relative;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: rgb(var(--op-centre-lite-socket-rgb));
+}
+
+.op-centre-lite-socket-legend__swatch[data-state="error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-error);
+}
+.op-centre-lite-socket-legend__swatch[data-state="sleep"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-sleep);
+}
+.op-centre-lite-socket-legend__swatch[data-state="normal"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-normal);
+}
+.op-centre-lite-socket-legend__swatch[data-state="low"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-low);
+}
+.op-centre-lite-socket-legend__swatch[data-state="high"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-high);
+}
+.op-centre-lite-socket-legend__swatch[data-state="mining-error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-mining-error);
+}
+
+.op-centre-lite-socket-legend__swatch[data-state="empty"],
+.op-centre-lite-socket-legend__swatch[data-power] {
+  border: 1px solid var(--op-centre-lite-control-line);
+  background: var(--op-centre-lite-panel-bg);
+}
+
+.op-centre-lite-socket-legend__swatch[data-state="empty"] {
+  border-color: var(--op-centre-lite-line);
+}
+
+.op-centre-lite-socket-legend__swatch[data-power]::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: var(--op-centre-lite-socket-off);
+}
+
+.op-centre-lite-socket-legend__swatch[data-power="on"]::after {
+  background: var(--op-centre-lite-socket-on);
+}
+
+/* The heatmap's scale: the design sets it 19px in from the key's sides, 3px more than the status key. */
+.op-centre-lite-heat-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 12px;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-heat-legend__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.op-centre-lite-heat-legend__title {
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.op-centre-lite-heat-legend__keys {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.op-centre-lite-heat-legend__key {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+
+.op-centre-lite-heat-legend__key > span {
+  width: 9px;
+  height: 9px;
+  background: var(--op-centre-lite-heat, #4a4644);
+}
+
+.op-centre-lite-heat-legend__key > [data-state="empty"] {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #16130f;
+}
+
+.op-centre-lite-heat-legend__ramp {
+  height: 8px;
+}
+
+/* Coolest under the left end, the median centred under the middle, hottest under the right end. */
+.op-centre-lite-heat-legend__ticks {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  height: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.op-centre-lite-heat-legend__ticks > :last-child {
+  text-align: right;
+}
+
+/* Heatmap metric picker, top right of the workbench. */
+.op-centre-lite-heatmap__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 260px;
+}
+
+.op-centre-lite-heatmap__metric > span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--op-centre-lite-dim);
+}
+
+/* The design's select: an outlined 40px field on the control background. */
+.op-centre-lite-detail .mdk-select__trigger,
+.op-centre-lite-container-card .mdk-select__trigger {
+  height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--op-centre-lite-control-line);
+  border-radius: 0;
+  background: var(--op-centre-lite-control-bg);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Side panel */
+.op-centre-lite-side-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1px;
+  /* Serials and rack names are long unbroken strings; wrap them inside the panel. */
+  overflow-wrap: anywhere;
+  border: 1px solid var(--op-centre-lite-line);
+  background: var(--op-centre-lite-panel-bg);
+}
+
+.op-centre-lite-side-panel__head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 25px 24px 29px;
+  border-bottom: 1px solid var(--op-centre-lite-line);
+}
+
+.op-centre-lite-side-panel__title {
+  font-size: 18px;
+  line-height: 20px;
+  color: #fff;
+}
+
+.op-centre-lite-side-panel__subtitle {
+  font-size: 14px;
+  /* Room between lines when a long rack name wraps. */
+  line-height: 20px;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-side-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--op-centre-lite-line);
+}
+
+.op-centre-lite-side-panel__section-title {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 14px;
+  letter-spacing: 1.32px;
+  text-transform: uppercase;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-side-panel__hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 147px);
+  gap: 16px;
+  margin: 0;
+}
+
+.op-centre-lite-metric-grid__item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.op-centre-lite-metric-grid__item dt {
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-metric-grid__item dd {
+  margin: 0;
+  color: #fff;
+}
+
+.op-centre-lite-metric-grid__item dd[data-state] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-offline);
+  color: rgb(var(--op-centre-lite-socket-rgb));
+}
+
+.op-centre-lite-metric-grid__item dd[data-state="error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-error);
+}
+.op-centre-lite-metric-grid__item dd[data-state="sleep"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-sleep);
+}
+.op-centre-lite-metric-grid__item dd[data-state="low"],
+.op-centre-lite-metric-grid__item dd[data-state="normal"],
+.op-centre-lite-metric-grid__item dd[data-state="high"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-normal);
+}
+.op-centre-lite-metric-grid__item dd[data-state="mining-error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-mining-error);
+}
+
+.op-centre-lite-side-panel__info {
+  display: grid;
+  grid-template-columns: 151px 1fr;
+  margin: 0;
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.op-centre-lite-side-panel__info dt {
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-side-panel__info dd {
+  margin: 0;
+  color: #fff;
+}
+
+.op-centre-lite-side-panel__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.op-centre-lite-side-panel__power,
+.op-centre-lite-side-panel__power .mdk-select__trigger {
+  width: 100%;
+}
+
+.op-centre-lite-side-panel__controls .mdk-button.op-centre-lite-tool {
+  width: 100%;
+  font-weight: 500;
+}
+
+/* Power controls */
+.op-centre-lite-power-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #fff;
+}
+
+.op-centre-lite-power-panel__field .mdk-input-root {
+  width: 100%;
+}
+
+/* The design's input: one 32px field, the value bright and the "%" dim at its right edge. */
+.op-centre-lite-power-panel__input .mdk-input {
+  height: 32px;
+  padding: 6px 30px 6px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.op-centre-lite-power-panel__input .mdk-input__suffix {
+  right: 10px;
+  color: var(--op-centre-lite-dim);
+}
+
+/* The devkit Slider is Radix unstyled (its USAGE classes ship no CSS): the design's 8px bar. */
 .op-centre-lite-slider {
   position: relative;
   display: flex;
-  flex: 1;
   align-items: center;
-  height: 20px;
+  height: 16px;
+  margin-top: 14px;
   touch-action: none;
   user-select: none;
 }
@@ -584,43 +1539,407 @@
 .op-centre-lite-slider__track {
   position: relative;
   flex: 1;
-  height: 4px;
-  background-color: var(--mdk-color-white-12);
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .op-centre-lite-slider__range {
   position: absolute;
   height: 100%;
-  background-color: var(--mdk-color-primary);
+  background: rgb(var(--op-centre-lite-orange));
 }
 
 .op-centre-lite-slider__thumb {
   display: block;
-  width: 14px;
-  height: 14px;
-  background-color: var(--mdk-color-primary);
+  width: 4px;
+  height: 16px;
+  background: #fff;
   cursor: grab;
 }
 
 .op-centre-lite-slider__thumb:focus-visible {
-  outline: 1px solid var(--mdk-color-white);
+  outline: 2px solid rgb(var(--op-centre-lite-orange));
   outline-offset: 2px;
 }
 
+.op-centre-lite-slider__ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--op-centre-lite-dim);
+}
+
+.op-centre-lite-detail .mdk-button.op-centre-lite-power-panel__apply {
+  height: 40px;
+  margin-top: 14px;
+  border-radius: 0;
+  background: rgb(var(--op-centre-lite-orange));
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+}
+
+.op-centre-lite-power-panel__rack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 14px;
+  color: #fff;
+}
+
+.op-centre-lite-power-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.op-centre-lite-power-panel__chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  color: #fff;
+}
+
+.op-centre-lite-power-panel__dot {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-normal);
+  width: 8px;
+  height: 8px;
+  background: rgb(var(--op-centre-lite-socket-rgb));
+}
+
+.op-centre-lite-power-panel__dot[data-state="error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-error);
+}
+.op-centre-lite-power-panel__dot[data-state="sleep"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-sleep);
+}
+.op-centre-lite-power-panel__dot[data-state="low"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-low);
+}
+.op-centre-lite-power-panel__dot[data-state="high"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-high);
+}
+.op-centre-lite-power-panel__dot[data-state="mining-error"] {
+  --op-centre-lite-socket-rgb: var(--op-centre-lite-state-mining-error);
+}
+
+/* Charts tab: the date range and rack picker over the two charts, each section ruled off. */
 .op-centre-lite-charts {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  margin-top: 16px;
+  margin-top: 23px;
 }
 
 .op-centre-lite-charts__toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  padding-bottom: 21px;
+  border-bottom: 1px solid var(--op-centre-lite-control-line);
 }
 
-.op-centre-lite-charts__rack {
-  min-width: 180px;
+.op-centre-lite-detail .mdk-date-picker__trigger.op-centre-lite-charts__range {
+  height: 34px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 0;
+  background: rgba(var(--op-centre-lite-orange), 0.2);
+  font-size: 14px;
+  color: rgb(var(--op-centre-lite-orange));
+}
+
+.op-centre-lite-detail
+  .mdk-date-picker__trigger.op-centre-lite-charts__range
+  .mdk-date-picker__icon {
+  display: none;
+}
+
+.op-centre-lite-charts__rack.mdk-select__trigger {
+  width: 170px;
+}
+
+.op-centre-lite-charts .op-centre-lite-history {
+  padding: 24px;
+  border-bottom: 1px solid var(--op-centre-lite-control-line);
+}
+
+.op-centre-lite-charts .mdk-line-chart-card {
+  border: 0;
+  background: transparent;
+}
+
+/* Print: the socket grid alone, every rack shown in full. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .op-centre-lite-workbench__grid,
+  .op-centre-lite-workbench__grid * {
+    visibility: visible;
+  }
+
+  .op-centre-lite-workbench__grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: auto;
+    overflow: visible;
+    border: 0;
+  }
+}
+
+/* Narrow screens: the legend keys wrap at their own width, the Explorer search takes its own row. */
+@media (max-width: 900px) {
+  .op-centre-lite-socket-legend {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .op-centre-lite-explorer__toolbar {
+    flex-wrap: wrap;
+  }
+
+  .op-centre-lite-explorer__search {
+    flex-basis: 100%;
+  }
+}
+
+/*
+ * The stats strip's four boxes need a page about 740px wide for one row.
+ * Narrower, they would scroll with no sign of the boxes cut off, so from the
+ * md breakpoint down they go two to a row, without the angled dividers.
+ */
+@container op-centre-lite-page (max-width: 768px) {
+  .op-centre-lite-page > .mdk-header-stats-bar {
+    display: grid;
+    padding-right: var(--op-centre-lite-shell-pad-x);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+    overflow: visible;
+  }
+
+  .op-centre-lite-page > .mdk-header-stats-bar .mdk-header-stats-bar__divider {
+    display: none;
+  }
+
+  .op-centre-lite-page > .mdk-header-stats-bar .mdk-header-stat-box {
+    min-width: 0;
+    padding: 8px 0;
+  }
+
+  .op-centre-lite-page > .mdk-header-stats-bar .mdk-header-stat-box__row {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+}
+
+/*
+ * Phones: the page 640px wide (the sm breakpoint) or less, whatever the dashboard sidebar leaves.
+ * Everything fits the page's width; only tables and the socket grid scroll
+ * sideways, inside their own box.
+ */
+@container op-centre-lite-page (max-width: 640px) {
+  /* Page title over its actions (the container page's model and miner count). */
+  .op-centre-lite-page__header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .op-centre-lite-page__actions {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* Site Overview cards: the controls and the two metrics one under the other, the status tiles in two rows. */
+  .op-centre-lite-container-card__controls,
+  .op-centre-lite-container-card__metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .op-centre-lite-container-card .mdk-miners-activity-chart__root--tiles {
+    flex-wrap: wrap;
+  }
+
+  .op-centre-lite-container-card .mdk-miners-activity-chart__tile {
+    flex: 1 0 calc((100% - 12px) / 4);
+  }
+
+  /* The rack table runs edge to edge in the card, in smaller type, so its four columns fit without scrolling. */
+  .op-centre-lite-container-card__body > .mdk-table {
+    padding-inline: 0;
+  }
+
+  .op-centre-lite-container-card .mdk-table__content-section {
+    border-inline: 0;
+  }
+
+  .op-centre-lite-rack-table th,
+  .op-centre-lite-rack-table td {
+    padding: 7px 6px;
+  }
+
+  .op-centre-lite-rack-table th:first-child,
+  .op-centre-lite-rack-table td:first-child {
+    padding-left: 12px;
+  }
+
+  .op-centre-lite-rack-table th:last-child,
+  .op-centre-lite-rack-table td:last-child {
+    padding-right: 12px;
+  }
+
+  .op-centre-lite-rack-table thead tr th {
+    font-size: 10px;
+  }
+
+  .op-centre-lite-rack-table tbody td {
+    font-size: 11px;
+  }
+
+  /* Site Efficiency: the bar keeps each meter's share and leaves the names to the table under it. */
+  .op-centre-lite-breakdown__segment-label > :first-child {
+    display: none;
+  }
+
+  .op-centre-lite-breakdown__table thead tr th,
+  .op-centre-lite-breakdown__table tbody td {
+    padding: 0 8px;
+  }
+
+  .op-centre-lite-breakdown__table tbody td {
+    font-size: 12px;
+  }
+
+  /* Wide enough for "Container 1" on one line: a meter's source wraps onto two lines, not three. */
+  .op-centre-lite-breakdown__source {
+    min-width: 14ch;
+  }
+
+  /* Explorer: the container filter and Export share a row; the row count sits over the pager. */
+  .op-centre-lite-explorer__container.mdk-select__trigger {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .op-centre-lite-explorer__footer {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Container page tabs: one row that scrolls sideways (the active tab is scrolled into view). */
+  .op-centre-lite-tabs.mdk_tabs__list {
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .op-centre-lite-tabs.mdk_tabs__list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .op-centre-lite-tabs .mdk_tabs__trigger {
+    padding: 10px 12px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .op-centre-lite-detail-body {
+    margin-top: 24px;
+  }
+
+  /* The workbench: tighter padding, its head stacked, the tools two to a row. */
+  .op-centre-lite-workbench {
+    gap: 16px;
+    padding: 12px;
+  }
+
+  /* Smaller sockets and gaps, so a two-rack container fits the width before the grid has to scroll. */
+  .op-centre-lite-socket-grid {
+    gap: 10px;
+    padding: 16px 10px 10px;
+  }
+
+  .op-centre-lite-socket-grid__rack {
+    width: auto;
+    padding: 7px 8px 8px;
+  }
+
+  .op-centre-lite-socket {
+    width: 96px;
+  }
+
+  .op-centre-lite-socket-grid[data-ordered="true"] .op-centre-lite-socket-grid__sockets {
+    grid-template-columns: repeat(auto-fill, 96px);
+  }
+
+  .op-centre-lite-workbench__head {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .op-centre-lite-workbench__actions,
+  .op-centre-lite-workbench__tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .op-centre-lite-detail .mdk-button.op-centre-lite-tool {
+    padding: 0 8px;
+  }
+
+  /* The metric picker sits in the head's actions grid; it takes the whole row. */
+  .op-centre-lite-heatmap__metric {
+    grid-column: 1 / -1;
+    width: auto;
+  }
+
+  .op-centre-lite-heatmap__metric .mdk-select__trigger {
+    width: 100%;
+  }
+
+  .op-centre-lite-socket-legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 10px;
+  }
+
+  .op-centre-lite-socket-legend li {
+    white-space: normal;
+  }
+
+  .op-centre-lite-heat-legend__top {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  /* Charts tab: the date range and rack picker full width, one over the other. */
+  .op-centre-lite-charts {
+    margin-top: 16px;
+  }
+
+  .op-centre-lite-charts__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding-bottom: 16px;
+  }
+
+  .op-centre-lite-charts__rack.mdk-select__trigger,
+  .op-centre-lite-detail .mdk-date-picker__trigger.op-centre-lite-charts__range {
+    width: 100%;
+    max-width: none;
+  }
+
+  .op-centre-lite-charts .op-centre-lite-history {
+    padding: 16px 0;
+  }
 }

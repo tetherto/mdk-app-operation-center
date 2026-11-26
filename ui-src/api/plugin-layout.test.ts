@@ -55,6 +55,149 @@ const mutate = (change: (layout: Layout) => void): Layout => {
 const fixtures: Array<{ name: string; layout: unknown; ok: boolean }> = [
   { name: "a site with empty sockets and a container without a meter", layout: valid(), ok: true },
   { name: "no containers", layout: { containers: [] }, ok: true },
+  { name: "a site meter", layout: { ...valid(), siteMeterDeviceId: "dcs-1" }, ok: true },
+  { name: "no site meter", layout: { ...valid(), siteMeterDeviceId: null }, ok: true },
+  {
+    name: "a site meter that is also a container's meter",
+    layout: { ...valid(), siteMeterDeviceId: "meter-1" },
+    ok: false,
+  },
+  {
+    name: "a container env device",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "envDeviceId", "bitdeer-1");
+    }),
+    ok: true,
+  },
+  {
+    name: "no container env device",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "envDeviceId", null);
+    }),
+    ok: true,
+  },
+  {
+    name: "one site sensor shared by two containers",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "envDeviceId", "sensor-1");
+      Reflect.set(l.containers[1]!, "envDeviceId", "sensor-1");
+    }),
+    ok: true,
+  },
+  {
+    name: "an env device that is also a miner",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[1]!, "envDeviceId", "wm-1");
+    }),
+    ok: false,
+  },
+  {
+    name: "an env device that is also a meter",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[1]!, "envDeviceId", "meter-1");
+    }),
+    ok: false,
+  },
+  {
+    name: "an empty env device id",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "envDeviceId", "");
+    }),
+    ok: false,
+  },
+  {
+    name: "a container device with PDU sockets, empty sockets included",
+    layout: mutate((l) => {
+      const c1 = l.containers[0]!;
+      Reflect.set(c1, "containerDeviceId", "bitdeer-1");
+      Reflect.set(c1.racks[0]!.sockets[0]!, "pdu", "1-1");
+      Reflect.set(c1.racks[0]!.sockets[0]!, "socket", "a1");
+      Reflect.set(c1.racks[0]!.sockets[1]!, "pdu", "1-1");
+      Reflect.set(c1.racks[0]!.sockets[1]!, "socket", "a2");
+    }),
+    ok: true,
+  },
+  {
+    name: "a container device that is also its env device",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "containerDeviceId", "bitdeer-1");
+      Reflect.set(l.containers[0]!, "envDeviceId", "bitdeer-1");
+    }),
+    ok: true,
+  },
+  {
+    name: "one PDU socket name in two containers",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "containerDeviceId", "bitdeer-1");
+      Reflect.set(l.containers[1]!, "containerDeviceId", "bitdeer-2");
+      for (const c of l.containers) {
+        Reflect.set(c.racks[0]!.sockets[0]!, "pdu", "1-1");
+        Reflect.set(c.racks[0]!.sockets[0]!, "socket", "a1");
+      }
+    }),
+    ok: true,
+  },
+  {
+    name: "no PDU socket (null)",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!.racks[0]!.sockets[0]!, "pdu", null);
+      Reflect.set(l.containers[0]!.racks[0]!.sockets[0]!, "socket", null);
+    }),
+    ok: true,
+  },
+  {
+    name: "one container device in two containers",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "containerDeviceId", "bitdeer-1");
+      Reflect.set(l.containers[1]!, "containerDeviceId", "bitdeer-1");
+    }),
+    ok: false,
+  },
+  {
+    name: "a container device that is also a meter",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[1]!, "containerDeviceId", "meter-1");
+    }),
+    ok: false,
+  },
+  {
+    name: "a pdu without a socket",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "containerDeviceId", "bitdeer-1");
+      Reflect.set(l.containers[0]!.racks[0]!.sockets[0]!, "pdu", "1-1");
+    }),
+    ok: false,
+  },
+  {
+    name: "a PDU socket in a container without a container device",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!.racks[0]!.sockets[0]!, "pdu", "1-1");
+      Reflect.set(l.containers[0]!.racks[0]!.sockets[0]!, "socket", "a1");
+    }),
+    ok: false,
+  },
+  {
+    name: "one PDU socket for two sockets of a container",
+    layout: mutate((l) => {
+      const c1 = l.containers[0]!;
+      Reflect.set(c1, "containerDeviceId", "bitdeer-1");
+      for (const s of [c1.racks[0]!.sockets[0]!, c1.racks[1]!.sockets[0]!]) {
+        Reflect.set(s, "pdu", "1-1");
+        Reflect.set(s, "socket", "a1");
+      }
+    }),
+    ok: false,
+  },
+  {
+    name: "an empty PDU name",
+    layout: mutate((l) => {
+      Reflect.set(l.containers[0]!, "containerDeviceId", "bitdeer-1");
+      Reflect.set(l.containers[0]!.racks[0]!.sockets[0]!, "pdu", "");
+      Reflect.set(l.containers[0]!.racks[0]!.sockets[0]!, "socket", "a1");
+    }),
+    ok: false,
+  },
+  { name: "an empty site meter id", layout: { ...valid(), siteMeterDeviceId: "" }, ok: false },
   {
     name: "a device in two sockets",
     layout: mutate((l) => {
@@ -138,6 +281,33 @@ describe("layout config: plugin validator and zod schema agree", () => {
     );
     expect(errors).toEqual([
       'layout.containers[1].racks[0].sockets[0].deviceId: duplicate device id "wm-1"',
+    ]);
+  });
+
+  it("names the socket whose PDU socket repeats", () => {
+    const errors = validateLayout(
+      mutate((l) => {
+        const c1 = l.containers[0]!;
+        Reflect.set(c1, "containerDeviceId", "bitdeer-1");
+        for (const s of [c1.racks[0]!.sockets[0]!, c1.racks[1]!.sockets[0]!]) {
+          Reflect.set(s, "pdu", "1-1");
+          Reflect.set(s, "socket", "a1");
+        }
+      }),
+    );
+    expect(errors).toEqual([
+      'layout.containers[0].racks[1].sockets[0]: duplicate PDU socket "1-1 / a1"',
+    ]);
+  });
+
+  it("names the env device that is also a miner", () => {
+    const errors = validateLayout(
+      mutate((l) => {
+        Reflect.set(l.containers[1]!, "envDeviceId", "wm-1");
+      }),
+    );
+    expect(errors).toEqual([
+      'layout.containers[1].envDeviceId: env device "wm-1" is also a miner or a meter',
     ]);
   });
 });

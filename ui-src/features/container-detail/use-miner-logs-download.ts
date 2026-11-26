@@ -6,6 +6,7 @@ import type { Miner } from "../../api/contract";
 import { downloadFile } from "../../api/download";
 import { minerLogsRoute } from "../../api/routes";
 import { describeRequestError } from "../../lib/describe-request-error";
+import { minerNameOf } from "./layout-shape";
 
 export type MinerLogsDownload = {
   download: (miner: Miner) => void;
@@ -21,13 +22,11 @@ export const useMinerLogsDownload = (): MinerLogsDownload => {
 
   const download = (miner: Miner) => {
     const url = apiUrl(minerLogsRoute(miner.id));
+    const name = minerNameOf(miner);
     setDownloadingId(miner.id);
-    downloadFile(url, `${miner.serial}-logs.tgz`)
+    downloadFile(url, `${name}-logs.tgz`)
       .catch((error: unknown) => {
-        notifyError(
-          `Could not download the logs of ${miner.serial}`,
-          describeRequestError(error, url),
-        );
+        notifyError(`Could not download the logs of ${name}`, describeRequestError(error, url));
       })
       .finally(() => setDownloadingId((current) => (current === miner.id ? undefined : current)));
   };

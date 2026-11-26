@@ -27,6 +27,7 @@ const createMiner = (overrides: Partial<Miner> = {}): Miner => ({
   powerW: 3_250,
   frequencyMhz: 600,
   inletTempC: 30,
+  envTempC: null,
   chipTempC: 80,
   uptimeS: 1,
   lastUpdate: 0,
@@ -40,7 +41,12 @@ const layoutOf = (miners: (Miner | null)[]) =>
       {
         id: "c1-r1",
         name: "Rack 1",
-        sockets: miners.map((miner, i) => ({ position: `1-1-${i + 1}`, miner })),
+        sockets: miners.map((miner, i) => ({
+          position: `1-1-${i + 1}`,
+          miner,
+          currentA: null,
+          enabled: null,
+        })),
       },
     ],
   } satisfies ContainerLayout);
@@ -88,10 +94,11 @@ describe("sharedPctOf", () => {
 });
 
 describe("clampPct", () => {
-  it("rounds to a whole percentage within 0 to 100", () => {
+  it("rounds to a whole percentage within 0 to 200", () => {
     expect(clampPct(72.6)).toBe(73);
     expect(clampPct(-5)).toBe(0);
-    expect(clampPct(140)).toBe(100);
+    expect(clampPct(140)).toBe(140);
+    expect(clampPct(240)).toBe(200);
   });
 
   it("falls back to 100 for something that is not a number", () => {
@@ -103,6 +110,10 @@ describe("selectionNameOf", () => {
   it("names one miner by serial and more by count", () => {
     expect(selectionNameOf([createMiner()])).toBe("WM1101");
     expect(selectionNameOf([createMiner(), createMiner({ id: "b" })])).toBe("2 miners");
+  });
+
+  it("names one miner with no serial by its id", () => {
+    expect(selectionNameOf([createMiner({ serial: "" })])).toBe("miner-1");
   });
 });
 
@@ -121,10 +132,11 @@ describe("parsePctInput", () => {
     expect(parsePctInput("abc")).toBeUndefined();
   });
 
-  it("reads a typed number as a whole percentage within 0 to 100", () => {
+  it("reads a typed number as a whole percentage within 0 to 200", () => {
     expect(parsePctInput("70")).toBe(70);
     expect(parsePctInput("0")).toBe(0);
-    expect(parsePctInput("150")).toBe(100);
+    expect(parsePctInput("150")).toBe(150);
+    expect(parsePctInput("250")).toBe(200);
     expect(parsePctInput("72.6")).toBe(73);
   });
 });

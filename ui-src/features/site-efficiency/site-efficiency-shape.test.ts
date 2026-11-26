@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PowerMeter, PowerMeters } from "../../api/contract";
 import {
   SERIES_COLOR_COUNT,
+  SITE_TOTAL_ROW_ID,
   toSiteEfficiencyView,
   UNMETERED_SLICE_ID,
 } from "./site-efficiency-shape";
@@ -55,7 +56,15 @@ describe("toSiteEfficiencyView", () => {
       hashratePhs: 2,
       miners: 18,
       efficiencyWPerThs: 30,
+      colorIndex: 0,
     });
+    expect(meters[1]?.colorIndex).toBe(1);
+  });
+
+  it("names each meter's container on its slice, for the table's source column", () => {
+    const { breakdown } = toSiteEfficiencyView(createMeters(), NAMES);
+
+    expect(breakdown.map((slice) => slice.containerName)).toEqual(["Container 1", "container-2"]);
   });
 
   it("splits the total between the meters when they cover it all", () => {
@@ -73,6 +82,7 @@ describe("toSiteEfficiencyView", () => {
     expect(breakdown.at(-1)).toEqual({
       id: UNMETERED_SLICE_ID,
       name: "Not metered",
+      containerName: undefined,
       powerKw: 30,
       sharePct: 20,
       colorIndex: undefined,
@@ -97,6 +107,39 @@ describe("toSiteEfficiencyView", () => {
     );
 
     expect(breakdown.at(-1)?.colorIndex).toBe(0);
+  });
+
+  it("lists the site meter's total first in the table, then each meter as meter · container", () => {
+    const { breakdownRows } = toSiteEfficiencyView(
+      createMeters({ siteMeterPowerW: 150_000 }),
+      NAMES,
+    );
+
+    expect(breakdownRows).toEqual([
+      {
+        id: SITE_TOTAL_ROW_ID,
+        source: "Site meter (total)",
+        powerKw: 150,
+        sharePct: 100,
+        series: "total",
+      },
+      { id: "meter-1", source: "PM-01 · Container 1", powerKw: 60, sharePct: 40, series: "0" },
+      { id: "meter-2", source: "PM-02 · container-2", powerKw: 60, sharePct: 40, series: "1" },
+      { id: UNMETERED_SLICE_ID, source: "Not metered", powerKw: 30, sharePct: 20, series: "rest" },
+    ]);
+  });
+
+  it("puts the site meter on the slices' share base, so a lagging meter shows below 100%", () => {
+    const { breakdownRows } = toSiteEfficiencyView(
+      createMeters({ siteMeterPowerW: 100_000 }),
+      NAMES,
+    );
+
+    expect(breakdownRows.map((row) => [row.powerKw, row.sharePct])).toEqual([
+      [100, (100 / 120) * 100],
+      [60, 50],
+      [60, 50],
+    ]);
   });
 
   it("gives every slice a zero share when the site draws nothing", () => {

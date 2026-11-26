@@ -1,0 +1,41 @@
+{
+  "contractVersion": "1",
+  "metadata": {
+    "provider": "demo",
+    "deviceFamily": "container",
+    "brand": "SIM",
+    "modelsSupported": ["CT-SIM"],
+    "overview": "A simulated mining container for the Operation Center Lite dev stack: one per container, reporting the container's own temperature and humidity the way the Bitdeer and Antspace container workers do (snap stats.ambient_temp_c, stats.humidity_percent), and its PDU sockets the way the Bitdeer worker does (snap stats.container_specific.pdu_data). Read-only; it has no commands."
+  },
+  "capabilities": {
+    "telemetry": [
+      {
+        "name": "temperature",
+        "unit": "C",
+        "type": "number",
+        "handler": "src/telemetry/temperature.js",
+        "description": "Air temperature inside the container."
+      },
+      {
+        "name": "humidity",
+        "unit": "%",
+        "type": "number",
+        "handler": "src/telemetry/humidity.js",
+        "description": "Relative humidity inside the container."
+      },
+      {
+        "name": "snap",
+        "type": "object",
+        "handler": "src/telemetry/snap.js",
+        "description": "Every reading in one call, in the container workers' snap shape: { stats: { status, ambient_temp_c, humidity_percent, container_specific: { pdu_data } }, config }."
+      }
+    ],
+    "commands": [],
+    "health": {
+      "supportedStates": ["OK", "OFFLINE"]
+    },
+    "errors": {
+      "ERR_DEVICE_CALL_FAILED": "The simulator's HTTP API call failed or returned an error."
+    }
+  }
+}

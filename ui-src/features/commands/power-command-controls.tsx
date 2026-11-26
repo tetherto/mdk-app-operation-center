@@ -36,6 +36,8 @@ type PowerCommandControlsProps = {
   /** The target's percentage now; null when mixed or unknown. */
   currentPct: number | null;
   className?: string;
+  /** Offer "Set Power %" too; off where the page sets percentages elsewhere. Default on. */
+  withPct?: boolean;
 };
 
 /**
@@ -51,6 +53,7 @@ export const PowerCommandControls = ({
   currentMode,
   currentPct,
   className,
+  withPct = true,
 }: PowerCommandControlsProps) => {
   const config = useSiteConfig();
   const command = usePowerCommand(target, targetName);
@@ -91,26 +94,28 @@ export const PowerCommandControls = ({
           ))}
         </SelectContent>
       </Select>
-      <Select
-        value={NO_VALUE}
-        disabled={disabled}
-        onValueChange={(value) => setPending({ kind: "pct", pct: Number(value) })}
-      >
-        <SelectTrigger
-          aria-label={`Set power percentage of ${targetName}`}
-          aria-describedby={describedBy}
+      {withPct ? (
+        <Select
+          value={NO_VALUE}
+          disabled={disabled}
+          onValueChange={(value) => setPending({ kind: "pct", pct: Number(value) })}
         >
-          <SelectValue placeholder="Set Power %" />
-        </SelectTrigger>
-        <SelectContent>
-          {POWER_PCT_OPTIONS.map((pct) => (
-            <SelectItem key={pct} value={String(pct)}>
-              {formatPercent(pct)}
-              {pct === currentPct ? CURRENT : ""}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            aria-label={`Set power percentage of ${targetName}`}
+            aria-describedby={describedBy}
+          >
+            <SelectValue placeholder="Set Power %" />
+          </SelectTrigger>
+          <SelectContent>
+            {POWER_PCT_OPTIONS.map((pct) => (
+              <SelectItem key={pct} value={String(pct)}>
+                {formatPercent(pct)}
+                {pct === currentPct ? CURRENT : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
       {commandsOff ? (
         <span id={hintId} className="op-centre-lite-visually-hidden">
           {COMMANDS_OFF_MESSAGE}

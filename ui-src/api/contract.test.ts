@@ -79,6 +79,32 @@ describe("plugin mock site matches the contract", () => {
     expect(site.containerLayout("nope")).toBeNull();
   });
 
+  it("gives every socket its PDU reading: unreachable miners and empty sockets off", () => {
+    const sockets = containerLayoutSchema
+      .parse(site.containerLayout("container-1"))
+      .racks.flatMap((r) => r.sockets);
+
+    expect(sockets.every((s) => s.currentA !== null && s.enabled !== null)).toBe(true);
+    expect(sockets.filter((s) => s.miner === null).every((s) => s.enabled === false)).toBe(true);
+    expect(
+      sockets.filter((s) => s.miner?.status === "offline").every((s) => s.enabled === false),
+    ).toBe(true);
+    expect(sockets.some((s) => s.enabled === true && (s.currentA ?? 0) > 0)).toBe(true);
+  });
+
+  it("gives each container an env temperature its miners share", () => {
+    const [container] = containersSchema.parse(site.containers()).containers;
+    const layout = containerLayoutSchema.parse(site.containerLayout(container?.id ?? ""));
+    const miners = layout.racks.flatMap((r) =>
+      r.sockets.flatMap((s) => (s.miner ? [s.miner] : [])),
+    );
+
+    expect(container?.envTempC).toEqual(expect.any(Number));
+    expect(
+      miners.every((m) => Math.abs((m.envTempC ?? NaN) - (container?.envTempC ?? 0)) < 0.5),
+    ).toBe(true);
+  });
+
   it("serves paged and searched miners, and a miner's log file", () => {
     const page = minersPageSchema.parse(site.miners({ search: "10.1.1", pageSize: 3 }));
     const first = page.items[0];

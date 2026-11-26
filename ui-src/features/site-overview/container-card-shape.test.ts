@@ -34,6 +34,7 @@ const createContainer = (overrides: Partial<ContainerSummary> = {}): ContainerSu
   powerPct: 100,
   supportedPowerModes: ["sleep", "low", "normal", "high"],
   minerStatus: createStatus(),
+  envTempC: null,
   racks: [createRack()],
   ...overrides,
 });

@@ -1,6 +1,6 @@
-import type { Miner, MinerStatus } from "../../api/contract";
+import { type Miner, type MinerStatus, POWER_PCT_MAX } from "../../api/contract";
 import { formatCount } from "../../lib/units";
-import type { LayoutView } from "./layout-shape";
+import { type LayoutView, minerNameOf } from "./layout-shape";
 
 /** Miners a power command cannot reach, so the grid does not let them be picked. */
 const UNSELECTABLE: ReadonlySet<MinerStatus> = new Set(["offline"]);
@@ -28,11 +28,15 @@ export const sharedPctOf = (miners: Miner[]): number | null => {
 };
 
 export const PCT_MIN = 0;
-export const PCT_MAX = 100;
+export const PCT_MAX = POWER_PCT_MAX;
+/** Where the control starts: the miners' stock power. */
+export const DEFAULT_PCT = 100;
+/** The labels under the slider, as the design marks it. */
+export const PCT_TICKS = [0, 50, 100, 150, 200] as const;
 
-/** A typed or slid percentage as the command takes it: a whole number from 0 to 100. */
+/** A typed or slid percentage as the command takes it: a whole number from 0 to 200. */
 export const clampPct = (value: number): number =>
-  Number.isFinite(value) ? Math.min(PCT_MAX, Math.max(PCT_MIN, Math.round(value))) : PCT_MAX;
+  Number.isFinite(value) ? Math.min(PCT_MAX, Math.max(PCT_MIN, Math.round(value))) : DEFAULT_PCT;
 
 /**
  * What the number field's text sets: a percentage once it reads as a number,
@@ -48,5 +52,19 @@ export const parsePctInput = (text: string): number | undefined => {
 /** How the panel and the confirmation name the selection: "WM1103", or "6 miners". */
 export const selectionNameOf = (miners: Miner[]): string =>
   miners.length === 1 && miners[0] !== undefined
-    ? miners[0].serial
+    ? minerNameOf(miners[0])
     : formatCount(miners.length, "miner");
+
+/** The selected miners grouped by rack, in layout order, for the side panel's list. */
+export const selectionByRack = (
+  layout: LayoutView,
+  selectedIds: ReadonlySet<string>,
+): { rack: string; miners: Miner[] }[] =>
+  layout.racks
+    .map((rack) => ({
+      rack: rack.name,
+      miners: rack.sockets.flatMap((socket) =>
+        socket.miner !== null && selectedIds.has(socket.miner.id) ? [socket.miner] : [],
+      ),
+    }))
+    .filter((group) => group.miners.length > 0);

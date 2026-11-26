@@ -3,9 +3,9 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { apiErrorSchema, containersSchema, siteConfigSchema } from "./contract";
+import { apiErrorSchema, containersSchema, historySchema, siteConfigSchema } from "./contract";
 
-// The plugin as the app runtime loads it: through the SDK's plugin loader with
+// The plugin as the app runtime loads it: through its plugin loader with
 // a frozen context carrying the config and the Kernel client, so the
 // controllers' ambient `require("@tetherto/mdk-gateway/plugin")` resolves.
 const load = createRequire(import.meta.url);
@@ -26,7 +26,7 @@ const isLoader = (value: unknown): value is Loader =>
   value !== null &&
   "loadPlugin" in value &&
   typeof value.loadPlugin === "function";
-if (!isLoader(loaderModule)) throw new Error("the SDK's app-runtime plugin loader is missing");
+if (!isLoader(loaderModule)) throw new Error("the app runtime's plugin loader is missing");
 const { loadPlugin } = loaderModule;
 
 const logger = { debug() {}, info() {}, warn() {}, error() {} };
@@ -91,6 +91,51 @@ describe("plugin on the worker site", () => {
         .call("op-centre-lite.container-layout", { params: { id: "nope" } })
         .catch((e: unknown) => e),
     ).toMatchObject({ statusCode: 404 });
+  });
+
+  it("serves history from the Workers' stores when the Kernel has the snapshot read", async () => {
+    const ts = Math.floor(Date.now() / 300_000) * 300_000;
+    const client = {
+      ...noopClient,
+      async listWorkers() {
+        return { workers: [{ workerId: "w", state: "READY", deviceIds: ["wm-1"] }] };
+      },
+      async pullSnapshot() {
+        return {
+          devices: { "wm-1": { ts, metrics: { hashrate_rt: { points: [{ ts, value: 99 }] } } } },
+          snapshotTs: ts,
+        };
+      },
+    };
+    const app = loadApp({ mock: false, layout, mdkClient: client });
+    const series = historySchema.parse(
+      await app.call("op-centre-lite.history", {
+        query: { metric: "hashrate", interval: "5m", limit: 2 },
+      }),
+    );
+    expect(series).toEqual({
+      metric: "hashrate",
+      interval: "5m",
+      unit: "TH/s",
+      points: [{ ts, value: 99 }],
+      nominal: 110,
+    });
+  });
+
+  it("serves history from its own samples when the stack has no snapshot read", async () => {
+    const client = {
+      ...noopClient,
+      async pullSnapshot() {
+        throw new Error("ERR_MDK_CLIENT_NO_SUCH_METHOD: pullSnapshot");
+      },
+    };
+    const app = loadApp({ mock: false, layout, mdkClient: client });
+    const series = historySchema.parse(
+      await app.call("op-centre-lite.history", {
+        query: { metric: "power", interval: "5m", limit: 2 },
+      }),
+    );
+    expect(series).toEqual({ metric: "power", interval: "5m", unit: "W", points: [] });
   });
 
   it("answers 503 while the Kernel is unreachable", async () => {

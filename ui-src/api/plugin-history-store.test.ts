@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,11 +11,12 @@ const load = createRequire(import.meta.url);
 
 type Record_ = { ts: number; scope: string; hashrateThs: number; powerW: number; miners: number };
 type Store = {
-  load: () => number;
-  append: (records: Record_[]) => void;
-  query: (scope: string, start: number, end: number) => Record_[];
-  compact: () => void;
-  file: string | null;
+  open: () => Promise<void>;
+  append: (records: Record_[]) => Promise<void>;
+  query: (scope: string, start: number, end: number) => Promise<Record_[]>;
+  prune: () => Promise<void>;
+  close: () => Promise<void>;
+  location: string | null;
 };
 type Snapshot = { ts: number; miners: Map<string, unknown>; meters: Map<string, unknown> };
 type Modules = {
@@ -37,7 +38,7 @@ type Modules = {
     store: Store;
     query: Record<string, unknown>;
     now?: number;
-  }) => unknown;
+  }) => Promise<unknown>;
 };
 const asRecord = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null ? { ...value } : {};
@@ -101,7 +102,9 @@ const snapshotAt = (ts: number, scale = 1): Snapshot => ({
 });
 
 const dirs: string[] = [];
-afterEach(() => {
+const stores: Store[] = [];
+afterEach(async () => {
+  await Promise.all(stores.splice(0).map((store) => store.close()));
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 const tempDir = () => {
@@ -109,63 +112,73 @@ const tempDir = () => {
   dirs.push(dir);
   return dir;
 };
+const openStore = async (opts: { dir: string | null; retentionMs: number; now?: () => number }) => {
+  const store = createHistoryStore(opts);
+  await store.open();
+  stores.push(store);
+  return store;
+};
+const sample = (ts: number, scope = "site", hashrateThs = 1): Record_ => ({
+  ts,
+  scope,
+  hashrateThs,
+  powerW: 1,
+  miners: 1,
+});
 
 describe("history store", () => {
-  it("appends samples to history.jsonl, reloads them, and drops expired ones", () => {
+  it("keeps samples in a Hyperbee across a reopen and prunes expired ones", async () => {
     const dir = tempDir();
     let clock = 10 * DAY;
     const store = createHistoryStore({ dir, retentionMs: 2 * DAY, now: () => clock });
-    expect(store.load()).toBe(0);
-    store.append([{ ts: clock - 3 * DAY, scope: "site", hashrateThs: 1, powerW: 1, miners: 1 }]);
-    store.append([{ ts: clock - 60_000, scope: "site", hashrateThs: 2, powerW: 2, miners: 1 }]);
-    expect(
-      readFileSync(join(dir, "history.jsonl"), "utf8").split("\n").filter(Boolean),
-    ).toHaveLength(2);
+    await store.open();
+    expect(store.location).toBe(join(dir, "history"));
+    expect(await store.query("site", 0, clock)).toEqual([]);
+    await store.append([sample(clock - 3 * DAY, "site", 1)]);
+    await store.append([sample(clock - 60_000, "site", 2)]);
+    expect(await store.query("site", 0, clock)).toHaveLength(2);
+    await store.close();
 
-    const reopened = createHistoryStore({ dir, retentionMs: 2 * DAY, now: () => clock });
-    expect(reopened.load()).toBe(1);
-    expect(reopened.query("site", 0, clock)).toEqual([
-      { ts: clock - 60_000, scope: "site", hashrateThs: 2, powerW: 2, miners: 1 },
-    ]);
-    // load compacts the file to what it kept
-    expect(
-      readFileSync(join(dir, "history.jsonl"), "utf8").split("\n").filter(Boolean),
-    ).toHaveLength(1);
+    // open prunes what fell out of the retention window
+    const reopened = await openStore({ dir, retentionMs: 2 * DAY, now: () => clock });
+    expect(await reopened.query("site", 0, clock)).toEqual([sample(clock - 60_000, "site", 2)]);
 
-    // a garbage line is skipped
-    const dir2 = tempDir();
-    const broken = createHistoryStore({ dir: dir2, retentionMs: DAY, now: () => clock });
-    broken.append([{ ts: clock, scope: "site", hashrateThs: 1, powerW: 1, miners: 1 }]);
-    clock += 1;
-    expect(createHistoryStore({ dir: dir2, retentionMs: DAY, now: () => clock }).load()).toBe(1);
+    // a day after the last prune, the next append prunes again, every scope included
+    await reopened.append([sample(clock, "rack:gone")]);
+    clock += 2 * DAY + 1;
+    await reopened.append([sample(clock, "site", 3)]);
+    expect(await reopened.query("rack:gone", 0, clock)).toEqual([]);
+    expect(await reopened.query("site", 0, Infinity)).toEqual([sample(clock, "site", 3)]);
   });
 
-  it("answers a window by binary search over the ordered records", () => {
-    const store = createHistoryStore({ dir: null, retentionMs: DAY });
-    store.append(
-      Array.from({ length: 1000 }, (_, i) => ({
-        ts: i * 10,
-        scope: "site",
-        hashrateThs: i,
-        powerW: 0,
-        miners: 1,
-      })),
-    );
-    expect(store.query("site", 0, 10).map((r) => r.ts)).toEqual([0]);
-    expect(store.query("site", 95, 125).map((r) => r.ts)).toEqual([100, 110, 120]);
-    expect(store.query("site", 9990, 20_000).map((r) => r.ts)).toEqual([9990]);
-    expect(store.query("site", 10_000, 20_000)).toEqual([]);
-    expect(store.query("site", -50, 0)).toEqual([]);
-    expect(store.query("other", 0, 10)).toEqual([]);
+  it("answers a window of one scope by range read", async () => {
+    const store = await openStore({ dir: tempDir(), retentionMs: Infinity });
+    await store.append(Array.from({ length: 100 }, (_, i) => sample(i * 10, "rack:r1", i)));
+    await store.append([sample(100, "rack:r10"), sample(100, "rack:r")]);
+    expect((await store.query("rack:r1", 0, 10)).map((r) => r.ts)).toEqual([0]);
+    expect((await store.query("rack:r1", 95, 125)).map((r) => r.ts)).toEqual([100, 110, 120]);
+    expect((await store.query("rack:r1", 990, 20_000)).map((r) => r.ts)).toEqual([990]);
+    expect(await store.query("rack:r1", 1000, 20_000)).toEqual([]);
+    expect(await store.query("rack:r1", -50, 0)).toEqual([]);
+    expect((await store.query("rack:r10", 0, Infinity)).map((r) => r.scope)).toEqual(["rack:r10"]);
+    expect((await store.query("rack:r", 0, Infinity)).map((r) => r.scope)).toEqual(["rack:r"]);
+    expect(await store.query("other", 0, 10)).toEqual([]);
   });
 
-  it("works in memory without a data dir", () => {
-    const store = createHistoryStore({ dir: null, retentionMs: DAY });
-    store.append([{ ts: 5, scope: "rack:r1", hashrateThs: 1, powerW: 1, miners: 1 }]);
-    expect(store.load()).toBe(0);
-    expect(store.query("rack:r1", 0, 10)).toHaveLength(1);
-    expect(store.query("rack:r1", 6, 10)).toHaveLength(0);
-    expect(store.file).toBeNull();
+  it("refuses a data dir another store holds open", async () => {
+    const dir = tempDir();
+    await openStore({ dir, retentionMs: DAY });
+    const second = createHistoryStore({ dir, retentionMs: DAY });
+    await expect(second.open()).rejects.toThrow(/could not be locked/);
+    await second.close().catch(() => {});
+  });
+
+  it("works in memory without a data dir", async () => {
+    const store = await openStore({ dir: null, retentionMs: DAY });
+    await store.append([sample(5, "rack:r1")]);
+    expect(await store.query("rack:r1", 0, 10)).toHaveLength(1);
+    expect(await store.query("rack:r1", 6, 10)).toHaveLength(0);
+    expect(store.location).toBeNull();
   });
 });
 
@@ -189,7 +202,7 @@ describe("sampler", () => {
     });
     expect(records[2]).toMatchObject({ scope: "rack:r1", hashrateThs: 190, miners: 2 });
 
-    const store = createHistoryStore({ dir: null, retentionMs: DAY });
+    const store = await openStore({ dir: null, retentionMs: DAY });
     let reads = 0;
     const sampler = createSampler({
       topology,
@@ -205,7 +218,7 @@ describe("sampler", () => {
     await sampler.tick();
     await sampler.tick();
     expect(reads).toBe(2);
-    expect(store.query("site", 0, 10)).toHaveLength(2);
+    expect(await store.query("site", 0, 10)).toHaveLength(2);
 
     const failing = createSampler({
       topology,
@@ -222,18 +235,18 @@ describe("sampler", () => {
 });
 
 describe("history series", () => {
-  it("averages samples per bucket, skips empty buckets and sums the nominal hashrate of the scope", () => {
+  it("averages samples per bucket, skips empty buckets and sums the nominal hashrate of the scope", async () => {
     const topology = createTopology(layout);
-    const store = createHistoryStore({ dir: null, retentionMs: 30 * DAY });
     const now = Date.UTC(2026, 9, 23, 12, 7);
+    const store = await openStore({ dir: tempDir(), retentionMs: 30 * DAY, now: () => now });
     const bucket = (minutesAgo: number) =>
       Math.floor((now - minutesAgo * 60_000) / 300_000) * 300_000;
-    store.append(sampleOf(topology, snapshotAt(bucket(10) + 10_000, 1)));
-    store.append(sampleOf(topology, snapshotAt(bucket(10) + 70_000, 3)));
-    store.append(sampleOf(topology, snapshotAt(bucket(0) + 1_000, 2)));
+    await store.append(sampleOf(topology, snapshotAt(bucket(10) + 10_000, 1)));
+    await store.append(sampleOf(topology, snapshotAt(bucket(10) + 70_000, 3)));
+    await store.append(sampleOf(topology, snapshotAt(bucket(0) + 1_000, 2)));
 
     const site = historySchema.parse(
-      historySeries({
+      await historySeries({
         topology,
         store,
         query: { metric: "hashrate", interval: "5m", limit: 4 },
@@ -247,7 +260,7 @@ describe("history series", () => {
     ]);
 
     const rack = historySchema.parse(
-      historySeries({
+      await historySeries({
         topology,
         store,
         query: { metric: "power", interval: "5m", limit: 4, rackId: "r2" },
@@ -257,7 +270,7 @@ describe("history series", () => {
     expect(rack.points.map((p) => p.value)).toEqual([3400, 3400]);
 
     const container = historySchema.parse(
-      historySeries({
+      await historySeries({
         topology,
         store,
         query: {

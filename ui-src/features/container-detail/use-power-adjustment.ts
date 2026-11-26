@@ -6,7 +6,7 @@ import { usePowerCommand } from "../commands/use-power-command";
 import { useSiteConfig } from "../site-config/use-site-config";
 import {
   clampPct,
-  PCT_MAX,
+  DEFAULT_PCT,
   parsePctInput,
   selectionNameOf,
   sharedPctOf,
@@ -41,7 +41,7 @@ export type PowerAdjustment = {
  */
 export const usePowerAdjustment = (selection: PowerSelection): PowerAdjustment => {
   const config = useSiteConfig();
-  const [pct, setPct] = useState(PCT_MAX);
+  const [pct, setPct] = useState(DEFAULT_PCT);
   // Undefined while the field shows the percentage itself; set while typing.
   const [typed, setTyped] = useState<string | undefined>(undefined);
   const [pending, setPending] = useState<PowerChoice | undefined>(undefined);

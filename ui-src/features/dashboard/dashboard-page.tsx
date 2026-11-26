@@ -1,18 +1,17 @@
 import { useState } from "react";
 
-import type { HistoryInterval } from "../../api/contract";
 import { Page } from "../../components/page";
 import { HistoryChartCard } from "../history/history-chart-card";
-import { DEFAULT_HISTORY_INTERVAL } from "../history/history-intervals";
+import { LIVE_AXIS_FORMAT, liveToggle } from "../history/history-intervals";
+import { DEFAULT_HISTORY_SPAN, type HistorySpan, toLiveQuery } from "../history/history-window";
 import { useHistory } from "../history/use-history";
 
-/** Site hash rate against nominal, and site power consumption, each with its own interval. */
+/** Site hash rate against nominal, and site power consumption, each over its own window. */
 export const DashboardPage = () => {
-  const [hashrateInterval, setHashrateInterval] =
-    useState<HistoryInterval>(DEFAULT_HISTORY_INTERVAL);
-  const [powerInterval, setPowerInterval] = useState<HistoryInterval>(DEFAULT_HISTORY_INTERVAL);
-  const hashrate = useHistory({ metric: "hashrate", interval: hashrateInterval });
-  const power = useHistory({ metric: "power", interval: powerInterval });
+  const [hashrateSpan, setHashrateSpan] = useState<HistorySpan>(DEFAULT_HISTORY_SPAN);
+  const [powerSpan, setPowerSpan] = useState<HistorySpan>(DEFAULT_HISTORY_SPAN);
+  const hashrate = useHistory(toLiveQuery("hashrate", hashrateSpan));
+  const power = useHistory(toLiveQuery("power", powerSpan));
 
   return (
     <Page title="Dashboard">
@@ -20,14 +19,15 @@ export const DashboardPage = () => {
         <HistoryChartCard
           title="Hash Rate"
           view={hashrate}
-          interval={hashrateInterval}
-          onIntervalChange={setHashrateInterval}
+          toggle={liveToggle(hashrateSpan, setHashrateSpan)}
+          axisFormat={LIVE_AXIS_FORMAT}
         />
         <HistoryChartCard
           title="Power Consumption"
           view={power}
-          interval={powerInterval}
-          onIntervalChange={setPowerInterval}
+          toggle={liveToggle(powerSpan, setPowerSpan)}
+          axisFormat={LIVE_AXIS_FORMAT}
+          fill
         />
       </div>
     </Page>

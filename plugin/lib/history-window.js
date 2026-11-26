@@ -5,6 +5,7 @@ const { httpError } = require("./errors");
 
 /** Bucket length of each history interval (contract: HISTORY_INTERVALS). */
 const INTERVAL_MS = {
+  "1m": 60_000,
   "5m": 5 * 60_000,
   "30m": 30 * 60_000,
   "3h": 3 * 60 * 60_000,

@@ -1,5 +1,4 @@
 import {
-  Button,
   DateRangePicker,
   Select,
   SelectContent,
@@ -14,13 +13,13 @@ import { useContainerCharts } from "./use-container-charts";
 
 // Radix Select items cannot have an empty value, so "every rack" has its own.
 const ALL_RACKS = "all";
+const RANGE_FORMAT = "dd/MM/yy";
 
 type ChartsTabProps = { layout: LayoutView };
 
 /**
- * The container's hash rate against nominal and its power consumption, for the
- * whole container or one rack. Live by default; a picked date range fixes the
- * window, and each chart's interval toggle offers only the intervals that fit it.
+ * The container's hash rate against nominal and its power consumption over
+ * the picked days, for the whole container or one rack.
  */
 export const ChartsTab = ({ layout }: ChartsTabProps) => {
   const charts = useContainerCharts(layout);
@@ -28,6 +27,12 @@ export const ChartsTab = ({ layout }: ChartsTabProps) => {
   return (
     <div className="op-centre-lite-charts">
       <div className="op-centre-lite-charts__toolbar">
+        <DateRangePicker
+          selected={charts.range}
+          onSelect={charts.onRangeChange}
+          dateFormat={RANGE_FORMAT}
+          triggerClassName="op-centre-lite-charts__range"
+        />
         <Select
           value={charts.rackId ?? ALL_RACKS}
           onValueChange={(value) => charts.onRackChange(value === ALL_RACKS ? undefined : value)}
@@ -36,7 +41,7 @@ export const ChartsTab = ({ layout }: ChartsTabProps) => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_RACKS}>All racks</SelectItem>
+            <SelectItem value={ALL_RACKS}>All Racks</SelectItem>
             {layout.racks.map((rack) => (
               <SelectItem key={rack.id} value={rack.id}>
                 {rack.name}
@@ -44,29 +49,9 @@ export const ChartsTab = ({ layout }: ChartsTabProps) => {
             ))}
           </SelectContent>
         </Select>
-        <DateRangePicker
-          selected={charts.range}
-          onSelect={charts.onRangeChange}
-          placeholder="Live: latest readings"
-        />
-        {charts.isLive ? null : (
-          <Button variant="secondary" size="sm" onClick={() => charts.onRangeChange(undefined)}>
-            Back to live
-          </Button>
-        )}
       </div>
-      <HistoryChartCard
-        title="Hash Rate"
-        {...charts.hashrate}
-        allowedIntervals={charts.allowedIntervals}
-        spansDays={charts.spansDays}
-      />
-      <HistoryChartCard
-        title="Power Consumption"
-        {...charts.power}
-        allowedIntervals={charts.allowedIntervals}
-        spansDays={charts.spansDays}
-      />
+      <HistoryChartCard title="Hash Rate" {...charts.hashrate} />
+      <HistoryChartCard title="Power Consumption" {...charts.power} fill />
     </div>
   );
 };

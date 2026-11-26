@@ -22,12 +22,13 @@ import {
   type RackExplorerRow,
 } from "./explorer-shape";
 import { ExplorerTableFooter } from "./explorer-table-footer";
-import { isTab, SEARCH_PLACEHOLDERS, TABS } from "./explorer-tabs";
+import { SEARCH_PLACEHOLDERS, TABS } from "./explorer-tabs";
 import { ExplorerToolbar } from "./explorer-toolbar";
 import { MinersTab } from "./miners-tab";
 import { RacksTable } from "./racks-table";
 import { useExplorerContainers } from "./use-explorer-containers";
 import { useExplorerExport } from "./use-explorer-export";
+import { useExplorerTab } from "./use-explorer-tab";
 
 const PAGE_SIZE = 10;
 /** The miners route searches on the server: wait for a pause in typing before asking. */
@@ -44,10 +45,8 @@ type ExplorerTabsProps = {
 
 const ExplorerTabs = ({ racks: allRacks, containers, containerNames }: ExplorerTabsProps) => {
   const navigate = useNavigate();
-  // The tab stays in state, not in `?tab=`: the scaffolded dashboard matches its
-  // sidebar's active item on path + query, so any query unhighlights the page.
+  const [tab, setTab] = useExplorerTab();
   const [filters, dispatch] = useReducer(explorerFiltersReducer, INITIAL_EXPLORER_FILTERS);
-  const { tab } = filters;
   const filter = filterOf(filters, tab);
   const racksFilter = filterOf(filters, TABS.RACKS);
 
@@ -63,12 +62,8 @@ const ExplorerTabs = ({ racks: allRacks, containers, containerNames }: ExplorerT
   const racks = filterRackRows(allRacks, racksFilter);
   const csvExport = useExplorerExport({ tab, racks, minersFilter, containerNames });
 
-  const handleTabChange = (next: string) => {
-    if (isTab(next)) dispatch({ type: "tab", tab: next });
-  };
-
   const handleFilterChange = (next: ExplorerFilter) => {
-    dispatch({ type: "filter", filter: next });
+    dispatch({ tab, filter: next });
   };
 
   const openContainer = ({ containerId }: { containerId: string }) => {
@@ -76,8 +71,8 @@ const ExplorerTabs = ({ racks: allRacks, containers, containerNames }: ExplorerT
   };
 
   return (
-    <Tabs variant="underline" value={tab} onValueChange={handleTabChange}>
-      <TabsList>
+    <Tabs variant="underline" value={tab} onValueChange={setTab}>
+      <TabsList className="op-centre-lite-tabs">
         <TabsTrigger value={TABS.RACKS}>Racks</TabsTrigger>
         <TabsTrigger value={TABS.MINERS}>Miners</TabsTrigger>
       </TabsList>

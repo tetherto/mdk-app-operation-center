@@ -9,23 +9,42 @@ const scopeOf = (query) => {
 };
 
 /**
- * A history series from the store: one point per bucket of the resolved
- * query (./history-window.js), each the average of the samples in it. A
- * bucket with no sample is left out rather than zero-filled, so a gap
- * (restart, Kernel down) shows as a gap. `nominal` is the sum of the layout's
- * nominal hashrate over the scope's occupied sockets.
+ * A history series from the app's own samples: one point per bucket of the
+ * resolved query (./history-window.js), each the average of the samples in
+ * it. The whole window is one range read, grouped by bucket. A bucket
+ * with no sample is left out rather than zero-filled, so a gap
+ * (restart, Kernel down) shows as a gap.
  */
-function historySeries({ topology, store, query, now = Date.now() }) {
+async function historySeries({ topology, store, query, now = Date.now() }) {
   const scope = scopeOf(query);
   const step = INTERVAL_MS[query.interval];
   const field = query.metric === "hashrate" ? "hashrateThs" : "powerW";
+  const starts = bucketStarts(query, now);
+  const samples = await store.query(scope, starts[0], starts[starts.length - 1] + step);
   const points = [];
-  for (const ts of bucketStarts(query, now)) {
-    const samples = store.query(scope, ts, ts + step);
-    if (samples.length === 0) continue;
-    const sum = samples.reduce((total, sample) => total + sample[field], 0);
-    points.push({ ts, value: sum / samples.length });
+  for (const sample of samples) {
+    const ts = Math.floor(sample.ts / step) * step;
+    let point = points[points.length - 1];
+    if (point === undefined || point.ts !== ts) {
+      point = { ts, sum: 0, count: 0 };
+      points.push(point);
+    }
+    point.sum += sample[field];
+    point.count += 1;
   }
+  return shapeSeries(
+    topology,
+    query,
+    points.map(({ ts, sum, count }) => ({ ts, value: sum / count })),
+  );
+}
+
+/**
+ * The contract's History body around a series of `{ ts, value }` points.
+ * `nominal` is the sum of the layout's nominal hashrate over the scope's
+ * occupied sockets.
+ */
+function shapeSeries(topology, query, points) {
   if (query.metric === "power") {
     return { metric: "power", interval: query.interval, unit: "W", points };
   }
@@ -48,4 +67,4 @@ function nominalOf(topology, { containerId, rackId }) {
   return nominal;
 }
 
-module.exports = { historySeries, nominalOf, scopeOf };
+module.exports = { historySeries, nominalOf, scopeOf, shapeSeries };

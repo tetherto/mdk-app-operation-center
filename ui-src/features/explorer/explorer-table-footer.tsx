@@ -9,14 +9,18 @@ type ExplorerTableFooterProps = {
   onPageChange: (page: number) => void;
 };
 
-/** "Showing 1-10 of 16" and the page buttons under an Explorer table. */
+/**
+ * "Showing 1-10 of 16" and the page buttons under an Explorer table. Nothing
+ * when there are no rows: the table's empty state says so on its own.
+ */
 export const ExplorerTableFooter = ({
   page,
   pageSize,
   total,
   onPageChange,
 }: ExplorerTableFooterProps) => {
-  const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  if (total === 0) return null;
+  const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
 
   return (

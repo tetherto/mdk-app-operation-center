@@ -43,6 +43,7 @@ export const isContainerTab = (value: string | undefined): value is ContainerTab
  */
 export const FROM_CONTAINER_DETAIL = {
   explorer: `../${APP_PATHS.EXPLORER}`,
+  siteOverview: `../${APP_PATHS.SITE_OVERVIEW}`,
   tab: (containerId: string, tab: ContainerTab): string =>
     `../${generatePath(APP_PATHS.CONTAINER_DETAIL, { id: containerId, tab })}`,
 };

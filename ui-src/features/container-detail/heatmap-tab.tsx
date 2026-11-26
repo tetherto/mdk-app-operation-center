@@ -1,6 +1,5 @@
 import {
   Button,
-  ExportIcon,
   Select,
   SelectContent,
   SelectItem,
@@ -8,94 +7,110 @@ import {
   SelectValue,
 } from "@tetherto/mdk-react-devkit";
 
+import { FALLBACK } from "../../lib/constants";
 import { PowerCommandControls } from "../commands/power-command-controls";
 import { HeatmapLegend } from "./heatmap-legend";
 import { HEATMAP_METRIC_SPECS, HEATMAP_METRICS, type HeatmapMetric } from "./heatmap-shape";
-import type { LayoutView } from "./layout-shape";
-import { MinerPanel } from "./miner-panel";
-import { SocketGrid } from "./socket-grid";
+import { heatmapMetricsOf, type LayoutView, minerNameOf, socketLabelOf } from "./layout-shape";
+import { MetricGrid, NO_SOCKET_SELECTED, PanelHint, PanelSection, SidePanel } from "./side-panel";
 import { useHeatmap } from "./use-heatmap";
 import { useMinerLogsDownload } from "./use-miner-logs-download";
 import { useSocketSelection } from "./use-socket-selection";
-import { ZoomControls } from "./zoom-controls";
+import { Workbench } from "./workbench";
 
 const isHeatmapMetric = (value: string): value is HeatmapMetric =>
   HEATMAP_METRICS.some((metric) => metric === value);
 
+const METRIC_LABEL_ID = "op-centre-lite-heatmap-metric";
+
 type HeatmapTabProps = { layout: LayoutView };
 
 /**
- * The container's sockets coloured by one metric against the container's own
- * range, inlet temperature first. Selecting a miner opens its readings with
- * its power controls and a log download.
+ * The container's sockets coloured by one metric, inlet temperature first.
+ * Selecting a miner shows its power mode control, its log download and its
+ * readings beside the grid.
  */
 export const HeatmapTab = ({ layout }: HeatmapTabProps) => {
   const heatmap = useHeatmap(layout);
   const selection = useSocketSelection(layout);
   const logs = useMinerLogsDownload();
   const { selected } = selection;
+  const miner = selected?.miner;
 
   return (
-    <div className="op-centre-lite-layout">
-      <div className="op-centre-lite-layout__toolbar">
-        <div className="op-centre-lite-heatmap__controls">
-          <Select
-            value={heatmap.metric}
-            onValueChange={(value) => {
-              if (isHeatmapMetric(value)) heatmap.onMetricChange(value);
-            }}
-          >
-            <SelectTrigger aria-label="Metric" className="op-centre-lite-heatmap__metric">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {HEATMAP_METRICS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {HEATMAP_METRIC_SPECS[option].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <HeatmapLegend metric={heatmap.metric} scale={heatmap.scale} />
-        </div>
-        <ZoomControls zoom={selection.zoom} onZoomChange={selection.onZoomChange} />
-      </div>
-      <div className="op-centre-lite-layout__body">
-        <SocketGrid
-          racks={layout.racks}
-          zoom={selection.zoom}
-          selectedMinerId={selected?.id}
-          onSelect={selection.onSelect}
-          heatOf={heatmap.heatOf}
-        />
-        {selected === undefined ? null : (
-          <MinerPanel
-            miner={selected}
-            onClose={selection.onClear}
-            actions={
-              <>
+    <div className="op-centre-lite-detail-body">
+      <Workbench
+        layout={layout}
+        actions={
+          <div className="op-centre-lite-heatmap__metric">
+            <span id={METRIC_LABEL_ID}>Metric</span>
+            <Select
+              value={heatmap.metric}
+              onValueChange={(value) => {
+                if (isHeatmapMetric(value)) heatmap.onMetricChange(value);
+              }}
+            >
+              <SelectTrigger aria-labelledby={METRIC_LABEL_ID}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {HEATMAP_METRICS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {HEATMAP_METRIC_SPECS[option].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+        legend={<HeatmapLegend metric={heatmap.metric} scale={heatmap.scale} />}
+        faceOf={heatmap.faceOf}
+        isSelected={selection.isSelected}
+        onSelect={selection.onSelect}
+      />
+      <SidePanel
+        title={layout.container.name}
+        subtitle={selected === undefined ? NO_SOCKET_SELECTED : socketLabelOf(selected)}
+      >
+        {miner === undefined ? (
+          <PanelSection title="Miner Metrics">
+            <PanelHint>Select a socket to see its miner.</PanelHint>
+          </PanelSection>
+        ) : (
+          <>
+            <PanelSection title="Miner Controls">
+              <div className="op-centre-lite-side-panel__controls">
                 <PowerCommandControls
-                  className="op-centre-lite-miner-panel__controls"
-                  target={{ minerIds: [selected.id] }}
-                  targetName={selected.serial}
-                  supportedPowerModes={selected.supportedPowerModes}
-                  currentMode={selected.powerMode}
-                  currentPct={selected.powerPct}
+                  className="op-centre-lite-side-panel__power"
+                  target={{ minerIds: [miner.id] }}
+                  targetName={minerNameOf(miner)}
+                  supportedPowerModes={miner.supportedPowerModes}
+                  currentMode={miner.powerMode}
+                  currentPct={miner.powerPct}
+                  withPct={false}
                 />
                 <Button
                   variant="secondary"
-                  size="sm"
-                  icon={<ExportIcon />}
-                  loading={logs.isDownloading(selected.id)}
-                  onClick={() => logs.download(selected)}
+                  className="op-centre-lite-tool"
+                  loading={logs.isDownloading(miner.id)}
+                  onClick={() => logs.download(miner)}
                 >
                   Download Logs
                 </Button>
-              </>
-            }
-          />
+              </div>
+            </PanelSection>
+            <PanelSection title="Miner Metrics">
+              <MetricGrid rows={heatmapMetricsOf(miner, Date.now())} />
+            </PanelSection>
+            <PanelSection title="Miner Info">
+              <dl className="op-centre-lite-side-panel__info">
+                <dt>Serial</dt>
+                <dd>{miner.serial === "" ? FALLBACK : miner.serial}</dd>
+              </dl>
+            </PanelSection>
+          </>
         )}
-      </div>
+      </SidePanel>
     </div>
   );
 };

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { FALLBACK } from "./constants";
 import {
   formatCount,
+  formatFrequencyMhz,
+  formatMinerPowerKw,
   formatPercent,
   formatTemperatureC,
   formatPowerMw,
@@ -12,6 +14,7 @@ import {
   formatPowerKw,
   formatPowerW,
   roundTo,
+  toEfficiencyWPerThs,
 } from "./units";
 
 describe("formatEfficiency", () => {
@@ -73,5 +76,22 @@ describe("roundTo", () => {
     expect(roundTo(0.1 + 0.2, 2)).toBe(0.3);
     expect(roundTo(9.071_46, 2)).toBe(9.07);
     expect(roundTo(101.84, 0)).toBe(102);
+  });
+});
+
+describe("toEfficiencyWPerThs", () => {
+  it("divides power by hashrate", () => {
+    expect(toEfficiencyWPerThs(3_400, 200)).toBe(17);
+  });
+
+  it("is undefined without hashrate", () => {
+    expect(toEfficiencyWPerThs(3_400, 0)).toBeUndefined();
+  });
+});
+
+describe("formatMinerPowerKw and formatFrequencyMhz", () => {
+  it("format with their units and digits", () => {
+    expect(formatMinerPowerKw(8_123)).toBe("8.12 kW");
+    expect(formatFrequencyMhz(612.4)).toBe("612 MHz");
   });
 });

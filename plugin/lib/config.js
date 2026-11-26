@@ -16,6 +16,7 @@ const DEFAULTS = {
   downloadUrl: null,
   history: { sampleIntervalMs: 60_000, retentionDays: 30 },
   commands: { concurrency: 8, verify: false },
+  fleet: { liveFallback: false },
   snapshotTtlMs: 5_000,
 };
 
@@ -46,6 +47,7 @@ function settingsFrom(raw) {
   if (errors.length > 0) throw new Error(`ERR_LAYOUT_INVALID: ${errors.join("; ")}`);
   const history = raw.history ?? {};
   const commands = raw.commands ?? {};
+  const fleet = raw.fleet ?? {};
   return {
     mock: raw.mock === true,
     siteName: typeof raw.siteName === "string" && raw.siteName ? raw.siteName : DEFAULTS.siteName,
@@ -60,6 +62,7 @@ function settingsFrom(raw) {
       concurrency: Math.floor(positive(commands.concurrency, DEFAULTS.commands.concurrency)),
       verify: commands.verify === true,
     },
+    fleet: { liveFallback: fleet.liveFallback === true },
     snapshotTtlMs: positive(raw.snapshotTtlMs, DEFAULTS.snapshotTtlMs),
     dataDir: typeof raw.dataDir === "string" ? raw.dataDir : null,
   };

@@ -8,6 +8,7 @@ const { settings } = require("./config");
 const { httpError } = require("./errors");
 const { createFleet } = require("./fleet");
 const { historySeries } = require("./history");
+const { createSnapshotHistory } = require("./history-snapshot");
 const { createLogs } = require("./logs");
 const { createMockSite } = require("./mock-site");
 const { createSnapshotCache } = require("./snapshot");
@@ -17,8 +18,9 @@ const { createTopology } = require("./topology");
  * Where the routes read the site from. With `mock: true` in the app's config
  * every route is served from an in-memory site (./mock-site.js); otherwise
  * from the Kernel, through the app's own client: the layout config says what
- * sits where, the fleet reader pulls those devices, and one snapshot (kept
- * for `snapshotTtlMs`) serves every route.
+ * sits where, the fleet reader takes those devices' readings from their
+ * Workers' cache (./worker-cache.js), and one snapshot (kept for
+ * `snapshotTtlMs`) serves every route.
  *
  * Both sources expose the same methods and return the bodies of the contract
  * in ui-src/api/contract.ts. Methods that act for the caller (commands, logs)
@@ -31,6 +33,7 @@ function createWorkerSite() {
     client,
     topology,
     concurrency: settings.commands.concurrency,
+    liveFallback: settings.fleet.liveFallback,
     logger,
   });
   const snapshots = createSnapshotCache({
@@ -47,9 +50,12 @@ function createWorkerSite() {
     logger,
   });
   const logs = createLogs({ topology, fleet });
-  // Attached by main.js once the sampler's store is open; until then the
-  // series is empty rather than an error.
-  let store = { query: () => [] };
+  // History comes from the Workers' telemetry stores when the stack has the
+  // snapshot read (./history-snapshot.js), else from the app's own samples.
+  // The sampler's store is attached by main.js once it is open; until then
+  // the fallback series is empty rather than an error.
+  const snapshotHistory = createSnapshotHistory({ client, topology, logger });
+  let store = { query: async () => [] };
 
   return {
     config: async () => ({
@@ -62,7 +68,8 @@ function createWorkerSite() {
     containerLayout: async (id) => aggregate.containerLayout(topology, await snapshots.get(), id),
     powerMeters: async () => aggregate.powerMeters(topology, await snapshots.get()),
     miners: async (query) => aggregate.miners(topology, await snapshots.get(), query),
-    history: async (query) => historySeries({ topology, store, query }),
+    history: async (query) =>
+      (await snapshotHistory.series(query)) ?? historySeries({ topology, store, query }),
     minerLogs: (id, mdk) => logs(mdk, id),
     setPowerMode: (target, mode, mdk) => commands.setPowerMode(mdk, target, mode),
     setPowerPct: (target, pct, mdk) => commands.setPowerPct(mdk, target, pct),

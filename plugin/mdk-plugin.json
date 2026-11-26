@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-app-operation-center",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Operation Center Lite routes: site summary, containers, history, power meters, miners and power commands.",
   "routes": [
     {
@@ -173,7 +173,7 @@
                               {
                                 "type": "number",
                                 "minimum": 0,
-                                "maximum": 100
+                                "maximum": 200
                               },
                               {
                                 "type": "null"
@@ -239,6 +239,12 @@
                               "normal",
                               "high",
                               "empty"
+                            ]
+                          },
+                          "envTempC": {
+                            "type": [
+                              "number",
+                              "null"
                             ]
                           },
                           "racks": {
@@ -334,6 +340,7 @@
                           "powerPct",
                           "supportedPowerModes",
                           "minerStatus",
+                          "envTempC",
                           "racks"
                         ]
                       }
@@ -470,7 +477,7 @@
                                             {
                                               "type": "number",
                                               "minimum": 0,
-                                              "maximum": 100
+                                              "maximum": 200
                                             },
                                             {
                                               "type": "null"
@@ -504,6 +511,12 @@
                                         "inletTempC": {
                                           "type": "number"
                                         },
+                                        "envTempC": {
+                                          "type": [
+                                            "number",
+                                            "null"
+                                          ]
+                                        },
                                         "chipTempC": {
                                           "type": "number"
                                         },
@@ -532,6 +545,7 @@
                                         "powerW",
                                         "frequencyMhz",
                                         "inletTempC",
+                                        "envTempC",
                                         "chipTempC",
                                         "uptimeS",
                                         "lastUpdate"
@@ -541,11 +555,25 @@
                                       "type": "null"
                                     }
                                   ]
+                                },
+                                "currentA": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ]
+                                },
+                                "enabled": {
+                                  "type": [
+                                    "boolean",
+                                    "null"
+                                  ]
                                 }
                               },
                               "required": [
                                 "position",
-                                "miner"
+                                "miner",
+                                "currentA",
+                                "enabled"
                               ]
                             }
                           }
@@ -600,6 +628,7 @@
             "schema": {
               "type": "string",
               "enum": [
+                "1m",
                 "5m",
                 "30m",
                 "3h",
@@ -670,6 +699,7 @@
                         "interval": {
                           "type": "string",
                           "enum": [
+                            "1m",
                             "5m",
                             "30m",
                             "3h",
@@ -724,6 +754,7 @@
                         "interval": {
                           "type": "string",
                           "enum": [
+                            "1m",
                             "5m",
                             "30m",
                             "3h",
@@ -956,7 +987,7 @@
                               {
                                 "type": "number",
                                 "minimum": 0,
-                                "maximum": 100
+                                "maximum": 200
                               },
                               {
                                 "type": "null"
@@ -990,6 +1021,12 @@
                           "inletTempC": {
                             "type": "number"
                           },
+                          "envTempC": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
                           "chipTempC": {
                             "type": "number"
                           },
@@ -1018,6 +1055,7 @@
                           "powerW",
                           "frequencyMhz",
                           "inletTempC",
+                          "envTempC",
                           "chipTempC",
                           "uptimeS",
                           "lastUpdate"
@@ -1229,7 +1267,7 @@
                   "pct": {
                     "type": "number",
                     "minimum": 0,
-                    "maximum": 100
+                    "maximum": 200
                   }
                 },
                 "required": [

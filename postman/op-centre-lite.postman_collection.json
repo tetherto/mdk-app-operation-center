@@ -489,7 +489,7 @@
                 {
                   "key": "interval",
                   "value": "5m",
-                  "description": "5m | 30m | 3h | 1d"
+                  "description": "1m | 5m | 30m | 3h | 1d"
                 },
                 {
                   "key": "limit",

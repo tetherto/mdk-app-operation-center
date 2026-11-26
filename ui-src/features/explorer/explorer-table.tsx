@@ -1,5 +1,5 @@
 import { DataTable, type DataTableColumnDef } from "@tetherto/mdk-react-devkit";
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 
 // DataTable sets each column's width to its `size` (150px by default); a small
 // size lets the columns share the table width instead.
@@ -27,6 +27,23 @@ type ExplorerTableProps<Row> = {
   onRowClick: (row: Row) => void;
 };
 
+/**
+ * The rows the table gets: none until it has mounted. The devkit DataTable
+ * (TanStack) answers its sorted rows by queuing a page reset that runs a
+ * microtask later; with rows already there on the first render (cached by
+ * another page) that update reaches the table before React mounts it, and
+ * React logs an error. A layout effect hands the rows over after mount and
+ * before the browser paints, so nothing shows empty. MDK friction: DataTable
+ * does not pass `autoResetPageIndex` through.
+ */
+const useRowsAfterMount = <Row,>(rows: Row[]): Row[] => {
+  const [mounted, setMounted] = useState(false);
+  useLayoutEffect(() => setMounted(true), []);
+  return mounted ? rows : NO_ROWS;
+};
+
+const NO_ROWS: never[] = [];
+
 /** One page of Explorer rows: the given columns, then a chevron, and every row clickable. */
 export const ExplorerTable = <Row extends { id: string }>({
   columns,
@@ -38,9 +55,10 @@ export const ExplorerTable = <Row extends { id: string }>({
     () => [...columns, { id: "open", header: "", size: COLUMN_SIZE, cell: () => <RowChevron /> }],
     [columns],
   );
+  const data = useRowsAfterMount(rows);
   return (
     <DataTable<Row>
-      data={rows}
+      data={data}
       columns={withChevron}
       getRowId={(row) => row.id}
       enablePagination={false}

@@ -31,6 +31,7 @@ const createMiner = (id: string): Miner => ({
   powerW: 3_400,
   frequencyMhz: 600,
   inletTempC: 30,
+  envTempC: null,
   chipTempC: 70,
   uptimeS: 3_600,
   lastUpdate: 0,

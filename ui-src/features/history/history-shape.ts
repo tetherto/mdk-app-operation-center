@@ -29,17 +29,32 @@ export const seriesStats = (
   return { min, max, avg: sum / values.length };
 };
 
+type ChartPoint = { x: number; y: number | null };
+
 /**
  * Chart points in the display unit, rounded to the decimals shown: the chart
  * scales its axis to the data, so unrounded float noise (1e-11 W) would draw as
  * a full-height spike and leave the axis without labels. The footer's min, max
  * and average and the current value are computed from these rounded points too.
+ *
+ * With the window's bucket starts, every bucket gets a point and one with no
+ * data is a gap (`y: null`), so the time axis spans the whole window rather
+ * than only the stretch with data.
  */
 const toChartPoints = (
   points: HistoryPoint[],
   convert: (value: number) => number,
   fractionDigits: number,
-) => points.map((point) => ({ x: point.ts, y: roundTo(convert(point.value), fractionDigits) }));
+  buckets: readonly number[] = [],
+): ChartPoint[] => {
+  const byTs = new Map<number, number | null>(buckets.map((ts) => [ts, null]));
+  for (const point of points) byTs.set(point.ts, roundTo(convert(point.value), fractionDigits));
+  return [...byTs.entries()].sort(([a], [b]) => a - b).map(([x, y]) => ({ x, y }));
+};
+
+/** The values of the points that have one. */
+const valuesOf = (points: ChartPoint[]): number[] =>
+  points.flatMap((point) => (point.y === null ? [] : [point.y]));
 
 const footerOf = (
   values: number[],
@@ -86,14 +101,16 @@ const POWER_LABELS: Record<HistoryScopeKind, string> = {
 /**
  * Hashrate history as chart data, in PH/s: the measured series plus a flat
  * nominal line over the same window, each with its current value in the legend,
- * and min / max / average of the measured series in the footer.
+ * the measured series' current value highlighted in the header, and min / max /
+ * average of the measured series in the footer.
  */
 export const toHashrateChart = (
   history: Extract<History, { metric: "hashrate" }>,
   scope: HistoryScopeKind = HISTORY_SCOPES.SITE,
+  buckets?: readonly number[],
 ): LineChartCardData => {
-  const site = toChartPoints(history.points, thsToPhs, HASHRATE_DIGITS);
-  const values = site.map((point) => point.y);
+  const site = toChartPoints(history.points, thsToPhs, HASHRATE_DIGITS, buckets);
+  const values = valuesOf(site);
   const nominalPhs = thsToPhs(history.nominal);
   const latest = latestOf(values);
 
@@ -116,6 +133,7 @@ export const toHashrateChart = (
       {
         label: "Nominal hash rate",
         borderColor: CHART_COLORS.grey,
+        lineStyle: "dashed",
         data: site.map((point) => ({ x: point.x, y: nominalPhs })),
         currentValue: {
           value: formatFixed(nominalPhs, HASHRATE_DIGITS),
@@ -129,13 +147,14 @@ export const toHashrateChart = (
   return data;
 };
 
-/** Power history as chart data, in MW, with the latest value highlighted and min / max / average in the footer. */
+/** Power history as chart data, in MW, with the latest value in the legend and min / max / average in the footer. */
 export const toPowerChart = (
   history: Extract<History, { metric: "power" }>,
   scope: HistoryScopeKind = HISTORY_SCOPES.SITE,
+  buckets?: readonly number[],
 ): LineChartCardData => {
-  const series = toChartPoints(history.points, wToMw, POWER_DIGITS);
-  const values = series.map((point) => point.y);
+  const series = toChartPoints(history.points, wToMw, POWER_DIGITS, buckets);
+  const values = valuesOf(series);
   const latest = latestOf(values);
 
   const dataset: LineChartCardData["datasets"][number] = {

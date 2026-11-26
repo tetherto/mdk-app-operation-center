@@ -1,150 +1,161 @@
-import { Typography } from "@tetherto/mdk-react-devkit";
+import type { CSSProperties } from "react";
 
 import type { Miner } from "../../api/contract";
-import { FALLBACK } from "../../lib/constants";
-import { DISPLAY_FRACTION_DIGITS, formatFixed } from "../../lib/units";
+import type { HeatColor } from "./heatmap-shape";
 import {
-  EMPTY_SOCKET,
   type LayoutRack,
   type LayoutSocket,
+  type LayoutView,
+  minerNameOf,
+  orderedSockets,
   SOCKET_STATE_LABELS,
+  type SocketPower,
 } from "./layout-shape";
 
-// The grid's sizes, as CSS custom properties set from here (styles.css reads them).
-declare module "react" {
-  interface CSSProperties {
-    "--op-centre-lite-socket-size"?: string;
-    "--op-centre-lite-rack-columns"?: number;
-  }
-}
-
-/** Socket size multipliers the zoom steps through; 1 is the default. */
+/** Socket size multipliers the zoom steps through; 1 is the design's size. */
 export const ZOOM_LEVELS = [0.75, 1, 1.25, 1.5] as const;
 export type Zoom = (typeof ZOOM_LEVELS)[number];
 export const DEFAULT_ZOOM: Zoom = 1;
 
-/** A socket's side at zoom 1. */
-const BASE_SOCKET_PX = 52;
-
 /**
- * The layout gives a socket a position but no row or column, so the grid
- * wraps each rack's sockets in rows of up to 5: a 10 to 20 socket rack stays
- * compact. A rack with fewer sockets gets one column each. Real rack geometry
- * needs the layout config to carry it.
+ * What one tab shows on a socket tile: the lines over the position label, and
+ * the heatmap colour on the Heatmap tab (the status colours elsewhere).
  */
-const MAX_SOCKETS_PER_ROW = 5;
+export type SocketFace = { lines: string[]; heat?: HeatColor };
 
-const describeSocket = (rackName: string, socket: LayoutSocket): string =>
-  socket.miner === null
-    ? `${rackName}, socket ${socket.slot}: empty`
-    : `${rackName}, socket ${socket.slot}: ${socket.miner.serial}, ${SOCKET_STATE_LABELS[socket.state]}`;
-
-/** A heatmap's colour step and tile text for one socket; undefined leaves it uncoloured. */
-export type SocketHeatOf = (socket: LayoutSocket) => { step: number; label: string } | undefined;
-
-type SocketTileProps = {
-  rackName: string;
-  socket: LayoutSocket;
-  selected: boolean;
-  onSelect: (miner: Miner) => void;
-  heatOf: SocketHeatOf | undefined;
+const POWER_LABELS: Record<SocketPower, string | undefined> = {
+  on: "Socket On",
+  off: "Socket Off",
+  unknown: undefined,
 };
 
-const SocketTile = ({ rackName, socket, selected, onSelect, heatOf }: SocketTileProps) => {
-  const label = describeSocket(rackName, socket);
-  if (socket.miner === null) {
+const describeSocket = (socket: LayoutSocket, face: SocketFace | undefined): string => {
+  const power = POWER_LABELS[socket.power];
+  const parts =
+    socket.miner === null
+      ? [`Socket ${socket.position}: no miner`]
+      : [`Socket ${socket.position}`, minerNameOf(socket.miner), SOCKET_STATE_LABELS[socket.state]];
+  return parts
+    .concat(power === undefined ? [] : [power])
+    .concat(face?.lines ?? [])
+    .join(", ");
+};
+
+const SocketLines = ({ lines }: { lines: string[] }) => (
+  <span className="op-centre-lite-socket__lines" aria-hidden="true">
+    {lines.map((line, index) => (
+      // The lines are a fixed list per tab: their order is their identity.
+      // oxlint-disable-next-line react/no-array-index-key
+      <span key={index}>{line}</span>
+    ))}
+  </span>
+);
+
+type SocketTileProps = {
+  socket: LayoutSocket;
+  face: SocketFace | undefined;
+  selected: boolean;
+  onSelect: (miner: Miner) => void;
+};
+
+type HeatStyle = CSSProperties & { "--op-centre-lite-heat": string };
+
+/** A heatmap tile's data-heat (its ink, or "none") and its fill, for styles.css. */
+const heatAttributesOf = (heat: HeatColor | undefined) => {
+  if (heat === undefined) return {};
+  if (heat === "none") return { "data-heat": "none" };
+  const style: HeatStyle = { "--op-centre-lite-heat": heat.fill };
+  return { "data-heat": heat.ink, style };
+};
+
+const SocketTile = ({ socket, face, selected, onSelect }: SocketTileProps) => {
+  const label = describeSocket(socket, face);
+  const position = <span className="op-centre-lite-socket__position">{socket.position}</span>;
+  const { miner } = socket;
+  if (miner === null) {
     return (
       <div
         className="op-centre-lite-socket"
-        data-state={EMPTY_SOCKET}
+        data-state={socket.state}
+        data-power={socket.power}
         role="img"
         aria-label={label}
       >
-        <span className="op-centre-lite-socket__slot">{socket.slot}</span>
+        {face === undefined ? null : <SocketLines lines={face.lines} />}
+        {position}
       </div>
     );
   }
-  const { miner } = socket;
-  const heat = heatOf?.(socket);
   return (
     <button
       type="button"
       className="op-centre-lite-socket"
       data-state={socket.state}
-      data-heat={heatOf === undefined ? undefined : (heat?.step ?? "none")}
+      data-power={socket.power}
+      {...heatAttributesOf(face?.heat)}
       aria-label={label}
       aria-pressed={selected}
       onClick={() => onSelect(miner)}
     >
-      <span className="op-centre-lite-socket__slot">{socket.slot}</span>
-      <span className="op-centre-lite-socket__value">
-        {heatOf === undefined
-          ? formatFixed(miner.hashrateThs, DISPLAY_FRACTION_DIGITS.HASHRATE_TH_SOCKET)
-          : (heat?.label ?? FALLBACK)}
-      </span>
+      <SocketLines lines={face?.lines ?? []} />
+      {position}
     </button>
   );
 };
 
 type SocketGridProps = {
-  racks: LayoutRack[];
+  layout: LayoutView;
   zoom: Zoom;
-  /** The miner shown in the side panel, outlined in the grid. */
-  selectedMinerId: string | undefined;
-  /** Several miners picked at once (the Power Adjustment tab), outlined too. */
-  selectedMinerIds?: ReadonlySet<string>;
+  /** One list of every socket in position order, instead of a column per rack. */
+  ordered: boolean;
+  /** What a tile shows; the tab decides. */
+  faceOf: (socket: LayoutSocket) => SocketFace | undefined;
+  isSelected: (miner: Miner) => boolean;
   onSelect: (miner: Miner) => void;
-  /**
-   * Colour the sockets by a metric (the Heatmap tab) instead of by status, and
-   * show its value instead of the hash rate. Without it, the status grid.
-   */
-  heatOf?: SocketHeatOf;
 };
 
+type SocketListProps = Pick<SocketGridProps, "faceOf" | "isSelected" | "onSelect"> & {
+  sockets: LayoutSocket[];
+};
+
+const SocketList = ({ sockets, faceOf, isSelected, onSelect }: SocketListProps) => (
+  <div className="op-centre-lite-socket-grid__sockets">
+    {sockets.map((socket) => (
+      <SocketTile
+        key={socket.position}
+        socket={socket}
+        face={faceOf(socket)}
+        selected={socket.miner !== null && isSelected(socket.miner)}
+        onSelect={onSelect}
+      />
+    ))}
+  </div>
+);
+
+const RackColumn = ({ rack, ...list }: Omit<SocketListProps, "sockets"> & { rack: LayoutRack }) => (
+  <section className="op-centre-lite-socket-grid__rack" aria-label={rack.name}>
+    <h3 className="op-centre-lite-socket-grid__rack-name">{rack.name}</h3>
+    <SocketList sockets={rack.sockets} {...list} />
+  </section>
+);
+
 /**
- * Every rack of a container as a block of sockets, tinted by miner status, with
- * the socket number and the miner's hash rate in TH/s. A socket with a miner is
- * a button that selects it. Shared by the Layout, Power Adjustment and Heatmap tabs.
+ * The container's sockets: a column per rack, or one list in position order.
+ * A tile is tinted by its miner's status (or the heatmap colour), with the
+ * socket's power state on its position label. A socket with a miner is a
+ * button that selects it. Shared by the Layout, Power Adjustment and Heatmap tabs.
  */
-export const SocketGrid = ({
-  racks,
-  zoom,
-  selectedMinerId,
-  selectedMinerIds,
-  onSelect,
-  heatOf,
-}: SocketGridProps) => (
+export const SocketGrid = ({ layout, zoom, ordered, ...list }: SocketGridProps) => (
   <div
     className="op-centre-lite-socket-grid"
-    style={{ "--op-centre-lite-socket-size": `${BASE_SOCKET_PX * zoom}px` }}
+    data-ordered={ordered}
+    // CSS zoom scales the tiles, their text and the gaps together.
+    style={{ zoom }}
   >
-    {racks.map((rack) => (
-      <section key={rack.id} className="op-centre-lite-socket-grid__rack" aria-label={rack.name}>
-        <Typography size="sm" weight="semibold">
-          {rack.name}
-        </Typography>
-        <div
-          className="op-centre-lite-socket-grid__sockets"
-          style={{
-            "--op-centre-lite-rack-columns": Math.min(rack.sockets.length, MAX_SOCKETS_PER_ROW),
-          }}
-        >
-          {rack.sockets.map((socket) => (
-            <SocketTile
-              key={socket.position}
-              rackName={rack.name}
-              socket={socket}
-              selected={
-                socket.miner !== null &&
-                (socket.miner.id === selectedMinerId ||
-                  selectedMinerIds?.has(socket.miner.id) === true)
-              }
-              onSelect={onSelect}
-              heatOf={heatOf}
-            />
-          ))}
-        </div>
-      </section>
-    ))}
+    {ordered ? (
+      <SocketList sockets={orderedSockets(layout)} {...list} />
+    ) : (
+      layout.racks.map((rack) => <RackColumn key={rack.id} rack={rack} {...list} />)
+    )}
   </div>
 );

@@ -1,70 +1,32 @@
-import { Button, Card, Input, Slider, Typography } from "@tetherto/mdk-react-devkit";
+import { Button, Input, Slider } from "@tetherto/mdk-react-devkit";
 
-import { FALLBACK } from "../../lib/constants";
-import { formatPercent } from "../../lib/units";
+import { formatCount, formatPercent } from "../../lib/units";
 import { ConfirmPowerDialog } from "../commands/confirm-power-dialog";
 import { COMMANDS_OFF_MESSAGE, POWER_TARGET_KINDS } from "../commands/power-commands";
-import { PCT_MAX, PCT_MIN } from "./power-adjustment-shape";
+import { type LayoutView, socketStateOf } from "./layout-shape";
+import { PCT_MAX, PCT_MIN, PCT_TICKS, selectionByRack } from "./power-adjustment-shape";
+import { PanelHint, PanelSection } from "./side-panel";
 import { usePowerAdjustment } from "./use-power-adjustment";
 import type { PowerSelection } from "./use-power-selection";
 
-const PICK_PROMPT = "Pick miners on the grid (offline ones cannot be picked).";
-
-type PowerAdjustmentPanelProps = { selection: PowerSelection };
+type PowerAdjustmentPanelProps = { layout: LayoutView; selection: PowerSelection };
 
 /**
- * The power percentage of the picked miners: a slider and a number field kept
- * in step, Apply with a confirmation, and Select all / Deselect all.
+ * The side panel's power controls: a number field and a 0-200% slider kept in
+ * step, Apply with a confirmation, then the picked sockets by rack.
  */
-export const PowerAdjustmentPanel = ({ selection }: PowerAdjustmentPanelProps) => {
+export const PowerAdjustmentPanel = ({ layout, selection }: PowerAdjustmentPanelProps) => {
   const adjustment = usePowerAdjustment(selection);
   const count = selection.miners.length;
+  const groups = selectionByRack(layout, selection.ids);
 
   return (
-    <Card className="op-centre-lite-power-panel">
-      <Card.Header>
-        <Typography size="md" weight="semibold">
-          Power adjustment
-        </Typography>
-      </Card.Header>
-      <Card.Body className="op-centre-lite-power-panel__body">
-        <Typography size="sm">
-          {count === 0 ? PICK_PROMPT : `${adjustment.name} selected`}
-        </Typography>
-        <div className="op-centre-lite-power-panel__selection">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={count === selection.selectableCount}
-            onClick={selection.onSelectAll}
-          >
-            Select all
-          </Button>
-          <Button variant="secondary" size="sm" disabled={count === 0} onClick={selection.onClear}>
-            Deselect all
-          </Button>
-        </div>
-        <Typography variant="secondary" size="sm">
-          Current power:{" "}
-          {adjustment.sharedPct === null ? FALLBACK : formatPercent(adjustment.sharedPct)}
-        </Typography>
-        <div className="op-centre-lite-power-panel__value">
-          <Slider.Root
-            className="op-centre-lite-slider"
-            min={PCT_MIN}
-            max={PCT_MAX}
-            step={1}
-            value={[adjustment.pct]}
-            onValueChange={([next]) => adjustment.onSlide(next ?? PCT_MAX)}
-          >
-            <Slider.Track className="op-centre-lite-slider__track">
-              <Slider.Range className="op-centre-lite-slider__range" />
-            </Slider.Track>
-            <Slider.Thumb className="op-centre-lite-slider__thumb" aria-label="Power percentage" />
-          </Slider.Root>
+    <>
+      <PanelSection title="Power Controls">
+        <label className="op-centre-lite-power-panel__field">
+          <span>Manual Input</span>
           <Input
             type="number"
-            aria-label="Power percentage value"
             min={PCT_MIN}
             max={PCT_MAX}
             value={adjustment.fieldText}
@@ -73,21 +35,61 @@ export const PowerAdjustmentPanel = ({ selection }: PowerAdjustmentPanelProps) =
             suffix="%"
             wrapperClassName="op-centre-lite-power-panel__input"
           />
+        </label>
+        <Slider.Root
+          className="op-centre-lite-slider"
+          min={PCT_MIN}
+          max={PCT_MAX}
+          step={1}
+          value={[adjustment.pct]}
+          onValueChange={([next]) => adjustment.onSlide(next ?? adjustment.pct)}
+        >
+          <Slider.Track className="op-centre-lite-slider__track">
+            <Slider.Range className="op-centre-lite-slider__range" />
+          </Slider.Track>
+          <Slider.Thumb className="op-centre-lite-slider__thumb" aria-label="Power percentage" />
+        </Slider.Root>
+        <div className="op-centre-lite-slider__ticks" aria-hidden="true">
+          {PCT_TICKS.map((tick) => (
+            <span key={tick}>{formatPercent(tick)}</span>
+          ))}
         </div>
         <Button
           variant="primary"
+          className="op-centre-lite-power-panel__apply"
           disabled={!adjustment.canApply}
           loading={adjustment.sending}
           onClick={adjustment.onApply}
         >
-          Apply {formatPercent(adjustment.pct)}
+          Apply
         </Button>
-        {adjustment.commandsOff ? (
-          <Typography variant="secondary" size="sm">
-            {COMMANDS_OFF_MESSAGE}
-          </Typography>
-        ) : null}
-      </Card.Body>
+        {adjustment.commandsOff ? <PanelHint>{COMMANDS_OFF_MESSAGE}</PanelHint> : null}
+      </PanelSection>
+      <PanelSection
+        title={`Selected ${formatCount(count, "socket")} from ${layout.container.name}`}
+      >
+        {groups.length === 0 ? (
+          <PanelHint>Pick sockets on the grid (offline ones cannot be picked).</PanelHint>
+        ) : (
+          groups.map((group) => (
+            <div key={group.rack} className="op-centre-lite-power-panel__rack">
+              <span>{group.rack}</span>
+              <ul className="op-centre-lite-power-panel__chips">
+                {group.miners.map((miner) => (
+                  <li key={miner.id} className="op-centre-lite-power-panel__chip">
+                    <span
+                      className="op-centre-lite-power-panel__dot"
+                      data-state={socketStateOf(miner)}
+                      aria-hidden="true"
+                    />
+                    Socket: {miner.position}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        )}
+      </PanelSection>
       <ConfirmPowerDialog
         choice={adjustment.pending}
         targetName={adjustment.name}
@@ -95,6 +97,6 @@ export const PowerAdjustmentPanel = ({ selection }: PowerAdjustmentPanelProps) =
         onConfirm={adjustment.onConfirm}
         onCancel={adjustment.onCancel}
       />
-    </Card>
+    </>
   );
 };

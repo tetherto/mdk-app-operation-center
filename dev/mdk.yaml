@@ -1,11 +1,12 @@
 # Local dev stack for Operation Center Lite. `mdk run --dir dev` boots the
-# Kernel, the vendor miner workers and a simulated power meter on mock devices,
-# this app (from the repo root, `..`) and the Gateway; `mdk run dashboard`
-# loads the app UI into a local dashboard. For UI work without the workers,
+# Kernel, the vendor miner workers, a simulated power meter and a simulated
+# container on mock devices, this app (from the repo root, `..`) and the
+# Gateway; `mdk run dashboard` loads the app UI into a local dashboard. For UI work without the workers,
 # `npm run dev:stack:mock` runs dev/mock-site/mdk.yaml instead.
 #
 # The site: four containers, two racks of ten sockets each, the last two
-# sockets of rack 2 empty, one power meter per container. Containers 1 to 3
+# sockets of rack 2 empty, one power meter and one container device (its air
+# temperature and PDU sockets) per container. Containers 1 to 3
 # are Whatsminers (API v3 mock), container 4 is Antminers (CGI mock). Every
 # device id below appears once in the app's `layout`, which is what gives it
 # a container, rack and socket: MDK devices carry no position of their own.
@@ -24,6 +25,9 @@ spec:
       package: whatsminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-1-1-1
             opts:
@@ -245,6 +249,9 @@ spec:
       package: whatsminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-2-1-1
             opts:
@@ -466,6 +473,9 @@ spec:
       package: whatsminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-3-1-1
             opts:
@@ -687,6 +697,9 @@ spec:
       package: antminer-mdk-worker
       config:
         mock: true
+        # Poll each miner once a minute into the Worker's telemetry store, so
+        # /api/history reads the Workers' series instead of sampling (MDK after 0.13.0).
+        telemetryPollIntervalMs: 60000
         devices:
           - id: miner-4-1-1
             opts:
@@ -899,6 +912,47 @@ spec:
             opts: { host: 127.0.0.1, port: 18175, baseW: 62000 }
           - id: meter-4
             opts: { host: 127.0.0.1, port: 18176, baseW: 64000 }
+    - name: containers
+      package: container-sim
+      config:
+        mock: true
+        devices:
+          - id: container-sim-1
+            opts:
+              {
+                host: 127.0.0.1,
+                port: 18181,
+                baseC: 26,
+                pdus: { "1-1": 10, "1-2": 10 },
+                off: [{ pdu: "1-2", socket: "9" }, { pdu: "1-2", socket: "10" }],
+              }
+          - id: container-sim-2
+            opts:
+              {
+                host: 127.0.0.1,
+                port: 18182,
+                baseC: 27,
+                pdus: { "1-1": 10, "1-2": 10 },
+                off: [{ pdu: "1-2", socket: "9" }, { pdu: "1-2", socket: "10" }],
+              }
+          - id: container-sim-3
+            opts:
+              {
+                host: 127.0.0.1,
+                port: 18183,
+                baseC: 27,
+                pdus: { "1-1": 10, "1-2": 10 },
+                off: [{ pdu: "1-2", socket: "9" }, { pdu: "1-2", socket: "10" }],
+              }
+          - id: container-sim-4
+            opts:
+              {
+                host: 127.0.0.1,
+                port: 18184,
+                baseC: 28,
+                pdus: { "1-1": 10, "1-2": 10 },
+                off: [{ pdu: "1-2", socket: "9" }, { pdu: "1-2", socket: "10" }],
+              }
   apps:
     - name: op-centre-lite
       package: op-centre-lite
@@ -907,6 +961,10 @@ spec:
         siteName: "Dev Site"
         # Set to false to try the hosted-demo (read-only) mode.
         commandsEnabled: true
+        # The vendor Workers here keep no snap cache (no worker-infra), so the
+        # app pulls their devices directly.
+        fleet:
+          liveFallback: true
         layout:
           containers:
             - id: container-1
@@ -914,129 +972,137 @@ spec:
               model: MicroBT WhatsMiner M56S
               nominalHashrateThs: 110
               meterDeviceId: meter-1
+              envDeviceId: container-sim-1
+              containerDeviceId: container-sim-1
               racks:
                 - id: container-1-rack-1
                   name: Rack 1
                   sockets:
-                    - { position: "1-1-1", deviceId: miner-1-1-1 }
-                    - { position: "1-1-2", deviceId: miner-1-1-2 }
-                    - { position: "1-1-3", deviceId: miner-1-1-3 }
-                    - { position: "1-1-4", deviceId: miner-1-1-4 }
-                    - { position: "1-1-5", deviceId: miner-1-1-5 }
-                    - { position: "1-1-6", deviceId: miner-1-1-6 }
-                    - { position: "1-1-7", deviceId: miner-1-1-7 }
-                    - { position: "1-1-8", deviceId: miner-1-1-8 }
-                    - { position: "1-1-9", deviceId: miner-1-1-9 }
-                    - { position: "1-1-10", deviceId: miner-1-1-10 }
+                    - { position: "1-1-1", deviceId: miner-1-1-1, pdu: "1-1", socket: "1" }
+                    - { position: "1-1-2", deviceId: miner-1-1-2, pdu: "1-1", socket: "2" }
+                    - { position: "1-1-3", deviceId: miner-1-1-3, pdu: "1-1", socket: "3" }
+                    - { position: "1-1-4", deviceId: miner-1-1-4, pdu: "1-1", socket: "4" }
+                    - { position: "1-1-5", deviceId: miner-1-1-5, pdu: "1-1", socket: "5" }
+                    - { position: "1-1-6", deviceId: miner-1-1-6, pdu: "1-1", socket: "6" }
+                    - { position: "1-1-7", deviceId: miner-1-1-7, pdu: "1-1", socket: "7" }
+                    - { position: "1-1-8", deviceId: miner-1-1-8, pdu: "1-1", socket: "8" }
+                    - { position: "1-1-9", deviceId: miner-1-1-9, pdu: "1-1", socket: "9" }
+                    - { position: "1-1-10", deviceId: miner-1-1-10, pdu: "1-1", socket: "10" }
                 - id: container-1-rack-2
                   name: Rack 2
                   sockets:
-                    - { position: "1-2-1", deviceId: miner-1-2-1 }
-                    - { position: "1-2-2", deviceId: miner-1-2-2 }
-                    - { position: "1-2-3", deviceId: miner-1-2-3 }
-                    - { position: "1-2-4", deviceId: miner-1-2-4 }
-                    - { position: "1-2-5", deviceId: miner-1-2-5 }
-                    - { position: "1-2-6", deviceId: miner-1-2-6 }
-                    - { position: "1-2-7", deviceId: miner-1-2-7 }
-                    - { position: "1-2-8", deviceId: miner-1-2-8 }
-                    - { position: "1-2-9", deviceId: null }
-                    - { position: "1-2-10", deviceId: null }
+                    - { position: "1-2-1", deviceId: miner-1-2-1, pdu: "1-2", socket: "1" }
+                    - { position: "1-2-2", deviceId: miner-1-2-2, pdu: "1-2", socket: "2" }
+                    - { position: "1-2-3", deviceId: miner-1-2-3, pdu: "1-2", socket: "3" }
+                    - { position: "1-2-4", deviceId: miner-1-2-4, pdu: "1-2", socket: "4" }
+                    - { position: "1-2-5", deviceId: miner-1-2-5, pdu: "1-2", socket: "5" }
+                    - { position: "1-2-6", deviceId: miner-1-2-6, pdu: "1-2", socket: "6" }
+                    - { position: "1-2-7", deviceId: miner-1-2-7, pdu: "1-2", socket: "7" }
+                    - { position: "1-2-8", deviceId: miner-1-2-8, pdu: "1-2", socket: "8" }
+                    - { position: "1-2-9", deviceId: null, pdu: "1-2", socket: "9" }
+                    - { position: "1-2-10", deviceId: null, pdu: "1-2", socket: "10" }
             - id: container-2
               name: Container 2
               model: MicroBT WhatsMiner M56S
               nominalHashrateThs: 110
               meterDeviceId: meter-2
+              envDeviceId: container-sim-2
+              containerDeviceId: container-sim-2
               racks:
                 - id: container-2-rack-1
                   name: Rack 1
                   sockets:
-                    - { position: "2-1-1", deviceId: miner-2-1-1 }
-                    - { position: "2-1-2", deviceId: miner-2-1-2 }
-                    - { position: "2-1-3", deviceId: miner-2-1-3 }
-                    - { position: "2-1-4", deviceId: miner-2-1-4 }
-                    - { position: "2-1-5", deviceId: miner-2-1-5 }
-                    - { position: "2-1-6", deviceId: miner-2-1-6 }
-                    - { position: "2-1-7", deviceId: miner-2-1-7 }
-                    - { position: "2-1-8", deviceId: miner-2-1-8 }
-                    - { position: "2-1-9", deviceId: miner-2-1-9 }
-                    - { position: "2-1-10", deviceId: miner-2-1-10 }
+                    - { position: "2-1-1", deviceId: miner-2-1-1, pdu: "1-1", socket: "1" }
+                    - { position: "2-1-2", deviceId: miner-2-1-2, pdu: "1-1", socket: "2" }
+                    - { position: "2-1-3", deviceId: miner-2-1-3, pdu: "1-1", socket: "3" }
+                    - { position: "2-1-4", deviceId: miner-2-1-4, pdu: "1-1", socket: "4" }
+                    - { position: "2-1-5", deviceId: miner-2-1-5, pdu: "1-1", socket: "5" }
+                    - { position: "2-1-6", deviceId: miner-2-1-6, pdu: "1-1", socket: "6" }
+                    - { position: "2-1-7", deviceId: miner-2-1-7, pdu: "1-1", socket: "7" }
+                    - { position: "2-1-8", deviceId: miner-2-1-8, pdu: "1-1", socket: "8" }
+                    - { position: "2-1-9", deviceId: miner-2-1-9, pdu: "1-1", socket: "9" }
+                    - { position: "2-1-10", deviceId: miner-2-1-10, pdu: "1-1", socket: "10" }
                 - id: container-2-rack-2
                   name: Rack 2
                   sockets:
-                    - { position: "2-2-1", deviceId: miner-2-2-1 }
-                    - { position: "2-2-2", deviceId: miner-2-2-2 }
-                    - { position: "2-2-3", deviceId: miner-2-2-3 }
-                    - { position: "2-2-4", deviceId: miner-2-2-4 }
-                    - { position: "2-2-5", deviceId: miner-2-2-5 }
-                    - { position: "2-2-6", deviceId: miner-2-2-6 }
-                    - { position: "2-2-7", deviceId: miner-2-2-7 }
-                    - { position: "2-2-8", deviceId: miner-2-2-8 }
-                    - { position: "2-2-9", deviceId: null }
-                    - { position: "2-2-10", deviceId: null }
+                    - { position: "2-2-1", deviceId: miner-2-2-1, pdu: "1-2", socket: "1" }
+                    - { position: "2-2-2", deviceId: miner-2-2-2, pdu: "1-2", socket: "2" }
+                    - { position: "2-2-3", deviceId: miner-2-2-3, pdu: "1-2", socket: "3" }
+                    - { position: "2-2-4", deviceId: miner-2-2-4, pdu: "1-2", socket: "4" }
+                    - { position: "2-2-5", deviceId: miner-2-2-5, pdu: "1-2", socket: "5" }
+                    - { position: "2-2-6", deviceId: miner-2-2-6, pdu: "1-2", socket: "6" }
+                    - { position: "2-2-7", deviceId: miner-2-2-7, pdu: "1-2", socket: "7" }
+                    - { position: "2-2-8", deviceId: miner-2-2-8, pdu: "1-2", socket: "8" }
+                    - { position: "2-2-9", deviceId: null, pdu: "1-2", socket: "9" }
+                    - { position: "2-2-10", deviceId: null, pdu: "1-2", socket: "10" }
             - id: container-3
               name: Container 3
               model: MicroBT WhatsMiner M56S
               nominalHashrateThs: 110
               meterDeviceId: meter-3
+              envDeviceId: container-sim-3
+              containerDeviceId: container-sim-3
               racks:
                 - id: container-3-rack-1
                   name: Rack 1
                   sockets:
-                    - { position: "3-1-1", deviceId: miner-3-1-1 }
-                    - { position: "3-1-2", deviceId: miner-3-1-2 }
-                    - { position: "3-1-3", deviceId: miner-3-1-3 }
-                    - { position: "3-1-4", deviceId: miner-3-1-4 }
-                    - { position: "3-1-5", deviceId: miner-3-1-5 }
-                    - { position: "3-1-6", deviceId: miner-3-1-6 }
-                    - { position: "3-1-7", deviceId: miner-3-1-7 }
-                    - { position: "3-1-8", deviceId: miner-3-1-8 }
-                    - { position: "3-1-9", deviceId: miner-3-1-9 }
-                    - { position: "3-1-10", deviceId: miner-3-1-10 }
+                    - { position: "3-1-1", deviceId: miner-3-1-1, pdu: "1-1", socket: "1" }
+                    - { position: "3-1-2", deviceId: miner-3-1-2, pdu: "1-1", socket: "2" }
+                    - { position: "3-1-3", deviceId: miner-3-1-3, pdu: "1-1", socket: "3" }
+                    - { position: "3-1-4", deviceId: miner-3-1-4, pdu: "1-1", socket: "4" }
+                    - { position: "3-1-5", deviceId: miner-3-1-5, pdu: "1-1", socket: "5" }
+                    - { position: "3-1-6", deviceId: miner-3-1-6, pdu: "1-1", socket: "6" }
+                    - { position: "3-1-7", deviceId: miner-3-1-7, pdu: "1-1", socket: "7" }
+                    - { position: "3-1-8", deviceId: miner-3-1-8, pdu: "1-1", socket: "8" }
+                    - { position: "3-1-9", deviceId: miner-3-1-9, pdu: "1-1", socket: "9" }
+                    - { position: "3-1-10", deviceId: miner-3-1-10, pdu: "1-1", socket: "10" }
                 - id: container-3-rack-2
                   name: Rack 2
                   sockets:
-                    - { position: "3-2-1", deviceId: miner-3-2-1 }
-                    - { position: "3-2-2", deviceId: miner-3-2-2 }
-                    - { position: "3-2-3", deviceId: miner-3-2-3 }
-                    - { position: "3-2-4", deviceId: miner-3-2-4 }
-                    - { position: "3-2-5", deviceId: miner-3-2-5 }
-                    - { position: "3-2-6", deviceId: miner-3-2-6 }
-                    - { position: "3-2-7", deviceId: miner-3-2-7 }
-                    - { position: "3-2-8", deviceId: miner-3-2-8 }
-                    - { position: "3-2-9", deviceId: null }
-                    - { position: "3-2-10", deviceId: null }
+                    - { position: "3-2-1", deviceId: miner-3-2-1, pdu: "1-2", socket: "1" }
+                    - { position: "3-2-2", deviceId: miner-3-2-2, pdu: "1-2", socket: "2" }
+                    - { position: "3-2-3", deviceId: miner-3-2-3, pdu: "1-2", socket: "3" }
+                    - { position: "3-2-4", deviceId: miner-3-2-4, pdu: "1-2", socket: "4" }
+                    - { position: "3-2-5", deviceId: miner-3-2-5, pdu: "1-2", socket: "5" }
+                    - { position: "3-2-6", deviceId: miner-3-2-6, pdu: "1-2", socket: "6" }
+                    - { position: "3-2-7", deviceId: miner-3-2-7, pdu: "1-2", socket: "7" }
+                    - { position: "3-2-8", deviceId: miner-3-2-8, pdu: "1-2", socket: "8" }
+                    - { position: "3-2-9", deviceId: null, pdu: "1-2", socket: "9" }
+                    - { position: "3-2-10", deviceId: null, pdu: "1-2", socket: "10" }
             - id: container-4
               name: Container 4
               model: Bitmain Antminer S21
               nominalHashrateThs: 200
               meterDeviceId: meter-4
+              envDeviceId: container-sim-4
+              containerDeviceId: container-sim-4
               racks:
                 - id: container-4-rack-1
                   name: Rack 1
                   sockets:
-                    - { position: "4-1-1", deviceId: miner-4-1-1 }
-                    - { position: "4-1-2", deviceId: miner-4-1-2 }
-                    - { position: "4-1-3", deviceId: miner-4-1-3 }
-                    - { position: "4-1-4", deviceId: miner-4-1-4 }
-                    - { position: "4-1-5", deviceId: miner-4-1-5 }
-                    - { position: "4-1-6", deviceId: miner-4-1-6 }
-                    - { position: "4-1-7", deviceId: miner-4-1-7 }
-                    - { position: "4-1-8", deviceId: miner-4-1-8 }
-                    - { position: "4-1-9", deviceId: miner-4-1-9 }
-                    - { position: "4-1-10", deviceId: miner-4-1-10 }
+                    - { position: "4-1-1", deviceId: miner-4-1-1, pdu: "1-1", socket: "1" }
+                    - { position: "4-1-2", deviceId: miner-4-1-2, pdu: "1-1", socket: "2" }
+                    - { position: "4-1-3", deviceId: miner-4-1-3, pdu: "1-1", socket: "3" }
+                    - { position: "4-1-4", deviceId: miner-4-1-4, pdu: "1-1", socket: "4" }
+                    - { position: "4-1-5", deviceId: miner-4-1-5, pdu: "1-1", socket: "5" }
+                    - { position: "4-1-6", deviceId: miner-4-1-6, pdu: "1-1", socket: "6" }
+                    - { position: "4-1-7", deviceId: miner-4-1-7, pdu: "1-1", socket: "7" }
+                    - { position: "4-1-8", deviceId: miner-4-1-8, pdu: "1-1", socket: "8" }
+                    - { position: "4-1-9", deviceId: miner-4-1-9, pdu: "1-1", socket: "9" }
+                    - { position: "4-1-10", deviceId: miner-4-1-10, pdu: "1-1", socket: "10" }
                 - id: container-4-rack-2
                   name: Rack 2
                   sockets:
-                    - { position: "4-2-1", deviceId: miner-4-2-1 }
-                    - { position: "4-2-2", deviceId: miner-4-2-2 }
-                    - { position: "4-2-3", deviceId: miner-4-2-3 }
-                    - { position: "4-2-4", deviceId: miner-4-2-4 }
-                    - { position: "4-2-5", deviceId: miner-4-2-5 }
-                    - { position: "4-2-6", deviceId: miner-4-2-6 }
-                    - { position: "4-2-7", deviceId: miner-4-2-7 }
-                    - { position: "4-2-8", deviceId: miner-4-2-8 }
-                    - { position: "4-2-9", deviceId: null }
-                    - { position: "4-2-10", deviceId: null }
+                    - { position: "4-2-1", deviceId: miner-4-2-1, pdu: "1-2", socket: "1" }
+                    - { position: "4-2-2", deviceId: miner-4-2-2, pdu: "1-2", socket: "2" }
+                    - { position: "4-2-3", deviceId: miner-4-2-3, pdu: "1-2", socket: "3" }
+                    - { position: "4-2-4", deviceId: miner-4-2-4, pdu: "1-2", socket: "4" }
+                    - { position: "4-2-5", deviceId: miner-4-2-5, pdu: "1-2", socket: "5" }
+                    - { position: "4-2-6", deviceId: miner-4-2-6, pdu: "1-2", socket: "6" }
+                    - { position: "4-2-7", deviceId: miner-4-2-7, pdu: "1-2", socket: "7" }
+                    - { position: "4-2-8", deviceId: miner-4-2-8, pdu: "1-2", socket: "8" }
+                    - { position: "4-2-9", deviceId: null, pdu: "1-2", socket: "9" }
+                    - { position: "4-2-10", deviceId: null, pdu: "1-2", socket: "10" }
       serviceAccount: app:op-centre-lite
       permissionsDigest: a4e71417ef246cf9
   # Written by `mdk rbac init` and `mdk user add dev --admin`; see README.md.

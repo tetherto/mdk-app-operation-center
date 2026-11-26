@@ -1,6 +1,7 @@
 "use strict";
 
 const { POWER_MODES } = require("./contract-limits");
+const { pduSocketKey } = require("./topology");
 
 /**
  * Modes assumed when a worker declares `setPowerMode` without an enum: the
@@ -88,7 +89,16 @@ function statusOf(metrics, powerMode) {
  * the identity and mode it last showed. `lastSetPct` is the percent the app
  * last applied, reported when the worker has no readable one.
  */
-function normalizeMiner({ id, placement, capabilities, reply, previous, lastSetPct, now }) {
+function normalizeMiner({
+  id,
+  placement,
+  capabilities,
+  reply,
+  previous,
+  lastSetPct,
+  envTempC,
+  now,
+}) {
   const metrics = reply && typeof reply === "object" && reply.metrics ? reply.metrics : null;
   const reachable = metrics !== null && !failed(metrics.hashrate_rt) && !failed(metrics.status);
   const base = {
@@ -97,6 +107,7 @@ function normalizeMiner({ id, placement, capabilities, reply, previous, lastSetP
     rackId: placement.rackId,
     position: placement.position,
     supportedPowerModes: capabilities ? capabilities.supportedPowerModes : [],
+    envTempC,
   };
 
   if (!reachable) {
@@ -145,6 +156,50 @@ function normalizeMiner({ id, placement, capabilities, reply, previous, lastSetP
   };
 }
 
+/**
+ * A container's ambient temperature from its env device's reply; null when the
+ * pull failed or nothing is reported. Read from the snap: a container Worker's
+ * `stats.ambient_temp_c` (Bitdeer, Antspace), else a sensor's `stats.temp_c`
+ * (Seneca), which a faulted probe marks with status `error`. The `temperature`
+ * channel is read only when there is no snap: Bitdeer's answers 0 when the
+ * container has sent no temperature.
+ */
+function envTempOf(reply) {
+  const metrics = reply && typeof reply === "object" && reply.metrics ? reply.metrics : null;
+  if (metrics === null) return null;
+  const stats = metrics.snap && typeof metrics.snap.stats === "object" ? metrics.snap.stats : null;
+  if (stats === null) return number(metrics.temperature);
+  if (number(stats.ambient_temp_c) !== null) return stats.ambient_temp_c;
+  return stats.status === "error" ? null : number(stats.temp_c);
+}
+
+/**
+ * A container's PDU sockets from its container Worker's reply, keyed by
+ * ./topology.js pduSocketKey: `{ currentA, enabled }`, each null when the
+ * socket does not report it. Read from the snap's
+ * `stats.container_specific.pdu_data[].sockets[]` (Bitdeer); a PDU marked
+ * `offline` has no readings. Empty when the pull failed or the Worker reports
+ * no PDUs.
+ */
+function pduSocketsOf(reply) {
+  const sockets = new Map();
+  const metrics = reply && typeof reply === "object" && reply.metrics ? reply.metrics : null;
+  const pdus = metrics?.snap?.stats?.container_specific?.pdu_data;
+  if (!Array.isArray(pdus)) return sockets;
+  for (const pdu of pdus) {
+    if (!pdu || typeof pdu !== "object" || pdu.offline === true) continue;
+    if (!Array.isArray(pdu.sockets)) continue;
+    for (const socket of pdu.sockets) {
+      if (!socket || typeof socket !== "object") continue;
+      sockets.set(pduSocketKey(String(pdu.pdu), String(socket.socket)), {
+        currentA: number(socket.current_a),
+        enabled: typeof socket.enabled === "boolean" ? socket.enabled : null,
+      });
+    }
+  }
+  return sockets;
+}
+
 /** A power meter's reading; `online` false when the pull failed. */
 function normalizeMeter({ id, reply }) {
   const metrics = reply && typeof reply === "object" && reply.metrics ? reply.metrics : null;
@@ -152,4 +207,4 @@ function normalizeMeter({ id, reply }) {
   return { id, powerW: powerW ?? 0, online: powerW !== null };
 }
 
-module.exports = { fingerprint, normalizeMiner, normalizeMeter };
+module.exports = { envTempOf, fingerprint, normalizeMiner, normalizeMeter, pduSocketsOf };

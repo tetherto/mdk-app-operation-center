@@ -5,10 +5,14 @@ const {
   MINERS_MAX_PAGE_SIZE,
   POWER_MODES,
 } = require("./contract-limits");
+const { pduSocketKey } = require("./topology");
 
 /**
  * The contract's read bodies from a topology (./topology.js) and a snapshot:
- * `{ ts, miners: Map<deviceId, Miner>, meters: Map<deviceId, { powerW }> }`.
+ * `{ ts, miners: Map<deviceId, Miner>, meters: Map<deviceId, { powerW }>,
+ * envTempC: Map<containerId, number | null>, pduSockets: Map<containerId,
+ * Map<pduSocketKey, { currentA, enabled }>> }` (no entry for a container
+ * without a container device).
  * Pure: the worker site and the mock site both go through here, so their
  * totals, counts and shared values agree.
  */
@@ -69,6 +73,7 @@ function containerSummary(topology, snapshot, container) {
     powerMode: sharedValue(miners.map((m) => m.powerMode)),
     powerPct: sharedValue(miners.map((m) => m.powerPct)),
     supportedPowerModes: commonPowerModes(miners),
+    envTempC: snapshot.envTempC.get(container.id) ?? null,
     racks,
   };
 }
@@ -104,12 +109,31 @@ function containerLayout(topology, snapshot, id) {
     racks: container.racks.map((rack) => ({
       id: rack.id,
       name: rack.name,
-      sockets: rack.sockets.map((socket) => ({
-        position: socket.position,
-        miner: socket.deviceId === null ? null : (snapshot.miners.get(socket.deviceId) ?? null),
-      })),
+      sockets: rack.sockets.map((socket) => {
+        const reading =
+          socket.pdu === null
+            ? undefined
+            : snapshot.pduSockets.get(container.id)?.get(pduSocketKey(socket.pdu, socket.socket));
+        return {
+          position: socket.position,
+          miner: socket.deviceId === null ? null : (snapshot.miners.get(socket.deviceId) ?? null),
+          currentA: reading === undefined ? null : reading.currentA,
+          enabled: reading === undefined ? null : reading.enabled,
+        };
+      }),
     })),
   };
+}
+
+/**
+ * The site's total consumption: the layout's site meter when it names one
+ * (0 while that meter has no reading), else the container meters' sum.
+ */
+function siteMeterPowerW(topology, snapshot, meters) {
+  if (topology.siteMeterDeviceId === null || topology.siteMeterDeviceId === undefined) {
+    return meters.reduce((sum, meter) => sum + meter.powerW, 0);
+  }
+  return snapshot.meters.get(topology.siteMeterDeviceId)?.powerW ?? 0;
 }
 
 function powerMeters(topology, snapshot) {
@@ -129,7 +153,7 @@ function powerMeters(topology, snapshot) {
   }
   const site = totals(minersOf(snapshot, topology.minerIds));
   return {
-    siteMeterPowerW: meters.reduce((sum, meter) => sum + meter.powerW, 0),
+    siteMeterPowerW: siteMeterPowerW(topology, snapshot, meters),
     minersPowerW: site.powerW,
     hashrateThs: site.hashrateThs,
     meters,

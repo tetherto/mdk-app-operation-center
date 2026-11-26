@@ -39,6 +39,7 @@ const createContainer = (overrides: Partial<ContainerSummary> = {}): ContainerSu
   powerPct: 100,
   supportedPowerModes: ["sleep", "low", "normal", "high"],
   minerStatus: STATUS,
+  envTempC: null,
   racks: [createRack()],
   ...overrides,
 });
@@ -58,6 +59,7 @@ const createMiner = (overrides: Partial<Miner> = {}): Miner => ({
   powerW: 3_400,
   frequencyMhz: 600,
   inletTempC: 30,
+  envTempC: null,
   chipTempC: 70,
   uptimeS: 3_600,
   lastUpdate: 0,

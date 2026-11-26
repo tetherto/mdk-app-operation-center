@@ -28,6 +28,9 @@ export const DISPLAY_UNITS = {
   EFFICIENCY_CARD: "W/TH",
   PERCENT: "%",
   TEMPERATURE: "°C",
+  FREQUENCY: "MHz",
+  /** A socket's current, from its PDU. */
+  CURRENT: "A",
 } as const;
 
 /** Decimals per display unit. */
@@ -38,11 +41,17 @@ export const DISPLAY_FRACTION_DIGITS = {
   HASHRATE_TH_SOCKET: 0,
   /** A miner's power on a socket tile, in kW. */
   POWER_KW_SOCKET: 1,
+  /** A miner's power in the container page's side panel, in kW. */
+  POWER_KW_MINER: 2,
   POWER: 3,
   POWER_W: 0,
   POWER_KW: 0,
   EFFICIENCY: 2,
   TEMPERATURE: 1,
+  FREQUENCY: 0,
+  CURRENT: 1,
+  /** Site Efficiency's consumption breakdown: kW and shares to two decimals, as the design shows them. */
+  BREAKDOWN: 2,
 } as const;
 
 /** Fixed decimals, with thousands separators, in one locale everywhere. */
@@ -77,6 +86,13 @@ export const formatPowerMw = (mw: number): string =>
 
 export const formatPowerKw = (kw: number): string =>
   withUnit(formatFixed(kw, DISPLAY_FRACTION_DIGITS.POWER_KW), DISPLAY_UNITS.POWER_KW);
+
+/** One miner's power in kW, as the container page's side panel shows it: "8.12 kW". */
+export const formatMinerPowerKw = (w: number): string =>
+  withUnit(formatFixed(wToKw(w), DISPLAY_FRACTION_DIGITS.POWER_KW_MINER), DISPLAY_UNITS.POWER_KW);
+
+export const formatFrequencyMhz = (mhz: number): string =>
+  withUnit(formatFixed(mhz, DISPLAY_FRACTION_DIGITS.FREQUENCY), DISPLAY_UNITS.FREQUENCY);
 
 export const formatHashratePhs = (phs: number): string =>
   withUnit(formatFixed(phs, DISPLAY_FRACTION_DIGITS.HASHRATE), DISPLAY_UNITS.HASHRATE);

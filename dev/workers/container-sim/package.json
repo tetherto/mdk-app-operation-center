@@ -1,0 +1,17 @@
+{
+  "name": "container-sim",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Simulated mining container Worker Plugin for the Operation Center Lite dev stack: an mdk-contract.json plus src/ handlers, directory-loaded by WorkerRuntimeV2 through `mdk run`.",
+  "keywords": [
+    "mdk",
+    "mdk-worker"
+  ],
+  "license": "Apache-2.0",
+  "scripts": {
+    "mock": "node -e \"require('./mock/server').createServer({ host: '127.0.0.1', port: 18080, baseC: 27 })\""
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -14,8 +14,11 @@ import { z } from "zod";
 export const POWER_MODES = ["sleep", "low", "normal", "high"] as const;
 export const MINER_STATUSES = ["offline", "error", "sleep", "low", "normal", "high"] as const;
 export const HISTORY_METRICS = ["hashrate", "power"] as const;
-/** Bucket sizes of a history series: one point per bucket (the workers' stat-5m ... stat-1D logs). */
-export const HISTORY_INTERVALS = ["5m", "30m", "3h", "1d"] as const;
+/**
+ * Bucket sizes of a history series, finest first: one point per bucket. `1m`
+ * matches the app's default sample interval, so short windows get one point a minute.
+ */
+export const HISTORY_INTERVALS = ["1m", "5m", "30m", "3h", "1d"] as const;
 
 export const powerModeSchema = z.enum(POWER_MODES);
 export const minerStatusSchema = z.enum(MINER_STATUSES);
@@ -28,7 +31,13 @@ export type HistoryMetric = z.infer<typeof historyMetricSchema>;
 export type HistoryInterval = z.infer<typeof historyIntervalSchema>;
 
 const nonNegative = z.number().nonnegative();
-const percent = z.number().min(0).max(100);
+/**
+ * The highest power percentage a command may ask for and a reading may show:
+ * the design's control runs from 0% to 200%. A worker answers a value its
+ * miners do not support with an error, which the command reports.
+ */
+export const POWER_PCT_MAX = 200;
+const percent = z.number().min(0).max(POWER_PCT_MAX);
 const epochMs = z.number().int().nonnegative();
 
 /** Miner count per status, plus `empty` sockets. */
@@ -102,6 +111,11 @@ export const containerSummarySchema = z.object({
   /** Power modes every miner in the container accepts (vendors differ). */
   supportedPowerModes: z.array(powerModeSchema),
   minerStatus: minerStatusCountsSchema,
+  /**
+   * The container's ambient temperature, from its layout `envDeviceId`; null
+   * when it names none or the device has no reading.
+   */
+  envTempC: z.number().nullable(),
   racks: z.array(rackSummarySchema),
 });
 export type ContainerSummary = z.infer<typeof containerSummarySchema>;
@@ -182,7 +196,10 @@ export const powerMeterSchema = z.object({
 export type PowerMeter = z.infer<typeof powerMeterSchema>;
 
 export const powerMetersSchema = z.object({
-  /** Site meter total. Site efficiency = this / hashrate. */
+  /**
+   * Site total consumption: the layout's site meter, else the container
+   * meters' sum. Site efficiency = this / hashrate.
+   */
   siteMeterPowerW: nonNegative,
   /** Sum of the miners' own power readings. Mining efficiency = this / hashrate. */
   minersPowerW: nonNegative,
@@ -213,6 +230,8 @@ export const minerSchema = z.object({
   powerW: nonNegative,
   frequencyMhz: nonNegative,
   inletTempC: z.number(),
+  /** Its container's `envTempC`: the container's reading, not the miner's. */
+  envTempC: z.number().nullable(),
   chipTempC: z.number(),
   uptimeS: nonNegative,
   /** Last successful poll. */
@@ -233,7 +252,19 @@ export const containerLayoutSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
-      sockets: z.array(z.object({ position: z.string(), miner: minerSchema.nullable() })),
+      sockets: z.array(
+        z.object({
+          position: z.string(),
+          miner: minerSchema.nullable(),
+          /**
+           * The socket's current from its container's PDU, in A; null when the
+           * socket names no PDU socket or the PDU has no reading for it.
+           */
+          currentA: z.number().nullable(),
+          /** Whether the PDU powers the socket; null as for `currentA`. Never guessed. */
+          enabled: z.boolean().nullable(),
+        }),
+      ),
     }),
   ),
 });
@@ -317,6 +348,13 @@ export const layoutSocketSchema = z.object({
   position: z.string().min(1),
   /** The MDK device in this socket; null for an empty socket. Unique across the site. */
   deviceId: z.string().min(1).nullable(),
+  /**
+   * The PDU socket feeding this socket, as the container's Worker names it
+   * (Bitdeer: pdu "1-1", socket "a1"). Both or neither; unique within the
+   * container, and only in a container that names its `containerDeviceId`.
+   */
+  pdu: z.string().min(1).nullable().optional(),
+  socket: z.string().min(1).nullable().optional(),
 });
 export type LayoutSocket = z.infer<typeof layoutSocketSchema>;
 
@@ -338,6 +376,18 @@ export const layoutContainerSchema = z.object({
   nominalHashrateThs: nonNegative,
   /** The power meter device behind this container; null when it has none. */
   meterDeviceId: z.string().min(1).nullable(),
+  /**
+   * The device reporting the container's ambient temperature: the container's
+   * own Worker, or a sensor. Several containers may name one site sensor.
+   * Absent or null: the container has none.
+   */
+  envDeviceId: z.string().min(1).nullable().optional(),
+  /**
+   * The container's own Worker, which reports its PDU sockets (current, on/off).
+   * May be the same device as `envDeviceId`; one per container. Absent or null:
+   * the container has none.
+   */
+  containerDeviceId: z.string().min(1).nullable().optional(),
   racks: z.array(layoutRackSchema),
 });
 export type LayoutContainer = z.infer<typeof layoutContainerSchema>;
@@ -358,7 +408,15 @@ const unique = (
 };
 
 export const layoutSchema = z
-  .object({ containers: z.array(layoutContainerSchema) })
+  .object({
+    /**
+     * The meter of the whole site, cooling included (e.g. a DCS reading the
+     * site main meter); its reading is the site's total consumption. Absent
+     * or null: the total is the container meters' sum.
+     */
+    siteMeterDeviceId: z.string().min(1).nullable().optional(),
+    containers: z.array(layoutContainerSchema),
+  })
   .superRefine((layout, ctx) => {
     unique(
       ctx,
@@ -382,12 +440,57 @@ export const layoutSchema = z
         );
       });
     });
-    const deviceIds = layout.containers.flatMap((c) => [
-      ...(c.meterDeviceId === null ? [] : [c.meterDeviceId]),
-      ...c.racks.flatMap((r) =>
-        r.sockets.flatMap((s) => (s.deviceId === null ? [] : [s.deviceId])),
-      ),
-    ]);
+    const deviceIds = [
+      ...(layout.siteMeterDeviceId == null ? [] : [layout.siteMeterDeviceId]),
+      ...layout.containers.flatMap((c) => [
+        ...(c.meterDeviceId === null ? [] : [c.meterDeviceId]),
+        ...c.racks.flatMap((r) =>
+          r.sockets.flatMap((s) => (s.deviceId === null ? [] : [s.deviceId])),
+        ),
+      ]),
+    ];
     unique(ctx, "device id", deviceIds, ["containers"]);
+    const placed = new Set(deviceIds);
+    layout.containers.forEach((container, ci) => {
+      if (container.envDeviceId != null && placed.has(container.envDeviceId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `env device "${container.envDeviceId}" is also a miner or a meter`,
+          path: ["containers", ci, "envDeviceId"],
+        });
+      }
+      if (container.containerDeviceId != null && placed.has(container.containerDeviceId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `container device "${container.containerDeviceId}" is also a miner or a meter`,
+          path: ["containers", ci, "containerDeviceId"],
+        });
+      }
+      const pduSockets: string[] = [];
+      container.racks.forEach((rack, ri) => {
+        rack.sockets.forEach((socket, si) => {
+          const path = ["containers", ci, "racks", ri, "sockets", si];
+          if ((socket.pdu == null) !== (socket.socket == null)) {
+            ctx.addIssue({ code: "custom", message: "pdu and socket go together", path });
+          } else if (socket.pdu != null && socket.socket != null) {
+            if (container.containerDeviceId == null) {
+              ctx.addIssue({
+                code: "custom",
+                message: "a PDU socket needs the container's containerDeviceId",
+                path,
+              });
+            }
+            pduSockets.push(`${socket.pdu} / ${socket.socket}`);
+          }
+        });
+      });
+      unique(ctx, "PDU socket", pduSockets, ["containers", ci, "racks"]);
+    });
+    unique(
+      ctx,
+      "container device",
+      layout.containers.flatMap((c) => (c.containerDeviceId == null ? [] : [c.containerDeviceId])),
+      ["containers"],
+    );
   });
 export type Layout = z.infer<typeof layoutSchema>;

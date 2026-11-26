@@ -32,7 +32,7 @@ function createSampler({ topology, snapshots, store, intervalMs, logger }) {
     if (running !== null) return running;
     running = (async () => {
       try {
-        store.append(sampleOf(topology, await snapshots.fresh()));
+        await store.append(sampleOf(topology, await snapshots.fresh()));
       } catch (err) {
         if (logger) logger.warn("history sample skipped: %s", err && err.message);
       } finally {

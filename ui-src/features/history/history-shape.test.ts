@@ -45,6 +45,61 @@ describe("toHashrateChart", () => {
     expect(chart.datasets[0]?.currentValue).toEqual({ value: "652.00", unit: "PH/s" });
     expect(chart.minMaxAvg).toEqual({ min: "650.00 PH/s", max: "652.00 PH/s", avg: "651.00 PH/s" });
   });
+
+  it("dashes the nominal line and puts no separate value in the header", () => {
+    expect(chart.datasets[1]?.lineStyle).toBe("dashed");
+    expect(chart.highlightedValue).toBeUndefined();
+  });
+});
+
+describe("a series over its window's buckets", () => {
+  const STEP = 60_000;
+  const buckets = [T0, T0 + STEP, T0 + 2 * STEP, T0 + 3 * STEP];
+  const chart = toHashrateChart(
+    {
+      metric: "hashrate",
+      interval: "1m",
+      unit: "TH/s",
+      points: [
+        { ts: T0 + STEP, value: 650_000 },
+        { ts: T0 + 3 * STEP, value: 654_000 },
+      ],
+      nominal: 660_000,
+    },
+    "site",
+    buckets,
+  );
+
+  it("gives every bucket a point, a gap where there is no data, so the axis spans the window", () => {
+    expect(chart.datasets[0]?.data).toEqual([
+      { x: T0, y: null },
+      { x: T0 + STEP, y: 650 },
+      { x: T0 + 2 * STEP, y: null },
+      { x: T0 + 3 * STEP, y: 654 },
+    ]);
+  });
+
+  it("draws nominal across the whole window", () => {
+    expect(chart.datasets[1]?.data.map((point) => point.y)).toEqual([660, 660, 660, 660]);
+  });
+
+  it("leaves the gaps out of min / max / average and the current value", () => {
+    expect(chart.minMaxAvg).toEqual({ min: "650.00 PH/s", max: "654.00 PH/s", avg: "652.00 PH/s" });
+    expect(chart.datasets[0]?.currentValue).toEqual({ value: "654.00", unit: "PH/s" });
+  });
+
+  it("keeps a point outside the counted buckets rather than drop data", () => {
+    const power = toPowerChart(
+      { metric: "power", interval: "1m", unit: "W", points: [{ ts: T0 + 9 * STEP, value: 1e6 }] },
+      "site",
+      [T0],
+    );
+
+    expect(power.datasets[0]?.data).toEqual([
+      { x: T0, y: null },
+      { x: T0 + 9 * STEP, y: 1 },
+    ]);
+  });
 });
 
 describe("toPowerChart", () => {

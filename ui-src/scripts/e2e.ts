@@ -94,6 +94,28 @@ const first = containers[0]!;
 const layout = await get(`/api/containers/${first.id}/layout`, containerLayoutSchema);
 check("container layout lists every socket", layout.racks.flatMap((r) => r.sockets).length > 0);
 check("unknown container is 404", (await status("/api/containers/nope/layout")) === 404);
+const layoutMiners = layout.racks.flatMap((r) =>
+  r.sockets.flatMap((s) => (s.miner ? [s.miner] : [])),
+);
+check(
+  "every container and its miners carry the container's env temperature",
+  containers.every((c) => c.envTempC !== null) &&
+    layoutMiners.length > 0 &&
+    layoutMiners.every((m) => m.envTempC !== null),
+  `${first.id}: ${first.envTempC}`,
+);
+const layoutSockets = layout.racks.flatMap((r) => r.sockets);
+check(
+  "every socket carries its PDU current and on/off, empty sockets switched off",
+  layoutSockets.every((s) => s.currentA !== null && s.enabled !== null) &&
+    layoutSockets
+      .filter((s) => s.miner !== null)
+      .every((s) => s.enabled === true && (s.currentA ?? 0) > 0) &&
+    layoutSockets
+      .filter((s) => s.miner === null)
+      .every((s) => s.enabled === false && s.currentA === 0),
+  `${layoutSockets.filter((s) => s.enabled === false).length} off`,
+);
 const page = await get("/api/miners?pageSize=5&page=2", minersPageSchema);
 check(
   "miners page",

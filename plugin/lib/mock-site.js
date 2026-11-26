@@ -2,7 +2,7 @@
 
 const aggregate = require("./aggregate");
 const { bucketStarts } = require("./history-window");
-const { createTopology } = require("./topology");
+const { createTopology, pduSocketKey } = require("./topology");
 
 /**
  * An in-memory site, served when the app's config sets `mock: true` (the local
@@ -36,6 +36,10 @@ const INLET_TEMP_BASE_C = 32;
 /** Inlet temperature spread across miners, on top of the base. */
 const INLET_TEMP_SPREAD_C = 8;
 const INLET_TEMP_DRIFT_C = 2;
+/** A container's ambient temperature, below its miners' inlets. */
+const ENV_TEMP_BASE_C = 26;
+const ENV_TEMP_STEP_C = 0.8;
+const ENV_TEMP_DRIFT_C = 1.5;
 const CHIP_TEMP_BASE_C = 58;
 /** Chip temperature rise at full (`normal`) power. */
 const CHIP_TEMP_RISE_C = 14;
@@ -43,6 +47,8 @@ const CHIP_TEMP_IDLE_C = 30;
 /** Site-wide swing every miner shares (ambient temperature, curtailment), so totals move like a real site's. */
 const SITE_SWING = 0.02;
 const SITE_SWING_PERIOD_MS = 90 * 60_000;
+/** A socket's current from its miner's power, in A: P / U at the PDU's line voltage. */
+const SOCKET_VOLTS = 400;
 /** A power meter also reads the container's own load (fans, pumps, controls). */
 const METER_OVERHEAD = 1.025;
 
@@ -96,7 +102,7 @@ function createMockSite({
       for (let s = 1; s <= SOCKETS_PER_RACK; s++) {
         const position = `${c}-${r}-${s}`;
         if (s > SOCKETS_PER_RACK - EMPTY_SOCKETS_PER_RACK) {
-          sockets.push({ position, deviceId: null });
+          sockets.push({ position, deviceId: null, pdu: `1-${r}`, socket: `${s}` });
           continue;
         }
         const id = `miner-${position}`;
@@ -113,6 +119,7 @@ function createMockSite({
           serial: `HT${String(c * 100_000 + r * 1000 + s).padStart(8, "0")}`,
           ip: `10.${c}.${r}.${s + 10}`,
           containerId,
+          containerIndex,
           rackId,
           position,
           supportedPowerModes,
@@ -123,7 +130,7 @@ function createMockSite({
           seed: random() * 2 * Math.PI,
           bootedAt: startedAt - Math.floor(random() * 9 * 86_400_000),
         });
-        sockets.push({ position, deviceId: id });
+        sockets.push({ position, deviceId: id, pdu: `1-${r}`, socket: `${s}` });
       }
       racks.push({ id: rackId, name: `Rack ${c}-${r}`, sockets });
     }
@@ -133,6 +140,8 @@ function createMockSite({
       model,
       nominalHashrateThs: NOMINAL_THS,
       meterDeviceId: `PM-${String(c).padStart(2, "0")}`,
+      envDeviceId: `ENV-${String(c).padStart(2, "0")}`,
+      containerDeviceId: `CT-${String(c).padStart(2, "0")}`,
       racks,
     });
   });
@@ -167,6 +176,11 @@ function createMockSite({
     };
   }
 
+  const envTempAt = (containerIndex, ts) =>
+    ENV_TEMP_BASE_C +
+    ENV_TEMP_STEP_C * containerIndex +
+    ENV_TEMP_DRIFT_C * wave(containerIndex, ts, 60 * MINUTE_MS);
+
   function toMiner(miner, ts) {
     const { hashrateThs, powerW } = readingsOf(miner, ts);
     const running = hashrateThs > 0;
@@ -190,6 +204,7 @@ function createMockSite({
         INLET_TEMP_BASE_C +
         INLET_TEMP_SPREAD_C * miner.spread +
         INLET_TEMP_DRIFT_C * wave(miner.seed + 2, ts, 45 * MINUTE_MS),
+      envTempC: envTempAt(miner.containerIndex, ts),
       chipTempC: running
         ? CHIP_TEMP_BASE_C + CHIP_TEMP_RISE_C * MODE_FACTOR[miner.powerMode].power * miner.spread
         : CHIP_TEMP_IDLE_C,
@@ -202,11 +217,31 @@ function createMockSite({
 
   /** The site at `ts`, in the shape ./aggregate.js reads (what the fleet reader returns). */
   function snapshotAt(ts) {
-    const snapshot = { ts, miners: new Map(), meters: new Map() };
+    const snapshot = {
+      ts,
+      miners: new Map(),
+      meters: new Map(),
+      envTempC: new Map(),
+      pduSockets: new Map(),
+    };
+    topology.containers.forEach((container, i) =>
+      snapshot.envTempC.set(container.id, envTempAt(i, ts)),
+    );
     for (const miner of miners.values()) snapshot.miners.set(miner.id, toMiner(miner, ts));
     for (const container of topology.containers) {
       const { powerW } = aggregate.totals(aggregate.minersOf(snapshot, container.minerIds));
       snapshot.meters.set(container.meterDeviceId, { powerW: powerW * METER_OVERHEAD });
+      // The PDU powers every socket but an empty one and an unreachable miner's.
+      const sockets = new Map();
+      for (const socket of container.racks.flatMap((rack) => rack.sockets)) {
+        const miner = socket.deviceId === null ? undefined : snapshot.miners.get(socket.deviceId);
+        const enabled = miner !== undefined && miner.status !== "offline";
+        sockets.set(pduSocketKey(socket.pdu, socket.socket), {
+          currentA: enabled ? Math.round((miner.powerW / SOCKET_VOLTS) * 10) / 10 : 0,
+          enabled,
+        });
+      }
+      snapshot.pduSockets.set(container.id, sockets);
     }
     return snapshot;
   }
